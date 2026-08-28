@@ -265,6 +265,66 @@ label.field > span { display: block; margin-bottom: 5px; color: var(--muted); fo
 .nut-row .vl { font-weight: 600; }
 .nut-sec { grid-column: 1 / -1; margin-top: 8px; color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
 
+/* ===== Ficha de nutrientes contra los valores de referencia (EFSA) =====
+   Cada fila muestra "consumido / objetivo" + % cubierto, con una barra fina abajo.
+   Rojo = no llega al objetivo (o se pasa de un techo como el sodio). */
+.nut-row.has-ref {
+  position: relative; display: grid; align-items: baseline; gap: 0 8px;
+  grid-template-columns: minmax(0, 1fr) auto 38px; padding-bottom: 7px; cursor: help;
+}
+.nut-row.has-ref .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nut-row.has-ref .vl { font-size: 12px; white-space: nowrap; }
+.nut-row.has-ref .vl i { font-style: normal; font-weight: 400; color: var(--muted-2); }
+.nut-row.has-ref .pc { font-size: 11.5px; font-weight: 700; text-align: right; white-space: nowrap; }
+.nut-row.has-ref .bar {
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  background: var(--line-soft); border-radius: 2px; overflow: hidden;
+}
+.nut-row.has-ref .bar i { display: block; height: 100%; border-radius: 2px; }
+/* No llega: es lo que el usuario quiere ver de un vistazo */
+/* El color va solo en el porcentaje y la barra: el nombre y la cifra se quedan
+   en su color normal para que la lista siga siendo legible de un vistazo. */
+.nut-row.bajo .pc { color: var(--danger); }
+.nut-row.bajo .bar i { background: var(--danger); }
+/* Se pasa del máximo tolerable o del techo (sodio, saturadas, azúcares...) */
+.nut-row.alto .pc { color: #ffab5c; }
+.nut-row.alto .bar i { background: #ffab5c; }
+/* Cubierto */
+.nut-row.ok .pc { color: var(--accent); }
+.nut-row.ok .bar i { background: var(--accent); }
+/* Solo informativo (agua): sin juicio de valor */
+.nut-row.info .pc { color: var(--muted-2); }
+.nut-row.info .bar i { background: var(--muted); opacity: .45; }
+/* La tabla de composición no mide este nutriente en casi ningún alimento del plan:
+   el total no es comparable, así que no se marca en rojo. */
+.nut-row.sindatos .nm, .nut-row.sindatos .vl, .nut-row.sindatos .vl i { color: var(--muted-2); }
+.nut-row.sindatos .pc { color: var(--muted-2); font-weight: 500; }
+.nut-row.sindatos .bar i { background: var(--muted-2); opacity: .4; }
+
+.nut-leyenda { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 12px; font-size: 11px; color: var(--muted); }
+.nut-leyenda .lg { display: inline-flex; align-items: center; gap: 5px; }
+.nut-leyenda .lg::before { content: ""; width: 9px; height: 3px; border-radius: 2px; background: var(--muted); }
+.nut-leyenda .lg.bajo::before { background: var(--danger); }
+.nut-leyenda .lg.alto::before { background: #ffab5c; }
+.nut-leyenda .lg.ok::before { background: var(--accent); }
+.nut-leyenda .lg.sindatos::before { background: var(--muted-2); opacity: .5; }
+
+/* Cabecera del bloque: perfil de referencia usado + resumen de objetivos */
+.dri-perfil {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 8px; padding: 7px 9px;
+  background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: var(--radius-sm);
+  font-size: 11.5px; color: var(--muted); line-height: 1.35;
+}
+.dri-perfil .grow { flex: 1; min-width: 0; }
+.dri-perfil b { color: var(--text); font-weight: 650; }
+.dri-resumen {
+  margin-bottom: 10px; padding: 8px 10px; border-radius: var(--radius-sm); font-size: 12px;
+  border: 1px solid transparent; line-height: 1.45;
+}
+.dri-resumen.todo-ok { background: rgba(95,208,166,.08); border-color: rgba(95,208,166,.3); color: var(--accent); }
+.dri-resumen.hay-fallos { background: rgba(255,107,107,.08); border-color: rgba(255,107,107,.3); color: var(--danger); }
+.dri-resumen .small { color: var(--muted); }
+
 /* Ingredientes constructor */
 .ing-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line-soft); }
 .ing-row .ing-nm { flex: 1; min-width: 0; }
@@ -312,7 +372,7 @@ label.field > span { display: block; margin-bottom: 5px; color: var(--muted); fo
 .plan-layout > .plan-scroll { flex: 1 1 auto; min-width: 0; }
 /* Cede ancho a la rejilla si hace falta, pero no baja de 250px */
 .plan-side {
-  flex: 0 1 300px; min-width: 250px; background: var(--surface); border: 1px solid var(--line-soft);
+  flex: 0 1 300px; min-width: 262px; background: var(--surface); border: 1px solid var(--line-soft);
   border-radius: var(--radius); padding: 14px; position: sticky; top: 16px;
   max-height: calc(100vh - 40px); overflow-y: auto;
 }

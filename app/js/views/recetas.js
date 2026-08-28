@@ -60,23 +60,68 @@ NP.comp = (function () {
     ]);
   }
 
-  function nutritionTable(n, faltantes = []) {
+  /**
+   * Ficha de nutrientes.
+   * refs (opcional): mapa clave → referencia de NP.dri.referencias(). Si se pasa, cada fila
+   * muestra "consumido / objetivo" y se pinta en rojo si no llega (o si se pasa de un techo).
+   */
+  function nutritionTable(n, faltantes = [], refs = null, cobs = null) {
     const rows = [];
     const sec = (t) => rows.push(el("div", { class: "nut-sec" }, t));
     const row = (k, label, unit) => {
       const inc = faltantes.includes(k);
-      rows.push(el("div", { class: "nut-row" }, [
+      const v = n[k];
+      const txtV = `${fmt(v, (v % 1 ? 1 : 0))} ${unit}`;
+      const ref = refs ? refs[k] : null;
+      if (!ref) {
+        rows.push(el("div", { class: "nut-row" }, [
+          el("span", { class: "nm" }, label + (inc ? " *" : "")),
+          el("span", { class: "vl" }, txtV),
+        ]));
+        return;
+      }
+      const cob = cobs ? cobs[k] : null;
+      const ev = NP.dri.evaluar(v, ref, cob);
+      const pct = ev.pct == null ? null : Math.round(ev.pct);
+      const fila = el("div", {
+        class: `nut-row has-ref ${ev.estado}`,
+        title: [
+          label + " — objetivo " + NP.dri.textoObjetivo(ref, unit),
+          ref.tipoLargo + " · " + ref.fuente,
+          ref.nota || "",
+          ev.estado === "sindatos"
+            ? `Sin datos suficientes: solo el ${Math.round(cob * 100)} % de los gramos del plan viene ` +
+              "de alimentos con este nutriente medido en BEDCA, así que el total no es comparable " +
+              "con el objetivo y no se marca en rojo."
+            : "",
+          inc ? "Ojo: algún ingrediente no tiene este dato en la tabla de composición, el total se queda corto." : "",
+        ].filter(Boolean).join("\n"),
+      }, [
         el("span", { class: "nm" }, label + (inc ? " *" : "")),
-        el("span", { class: "vl" }, `${fmt(n[k], (n[k] % 1 ? 1 : 0))} ${unit}`),
-      ]));
+        // la unidad va una sola vez, en el objetivo: en 250 px cada carácter cuenta
+        el("span", { class: "vl" }, [
+          fmt(v, (v % 1 ? 1 : 0)), el("i", {}, " / " + NP.dri.textoObjetivo(ref, unit)),
+        ]),
+        el("span", { class: "pc" }, ev.estado === "sindatos" ? "s/d" : pct == null ? "" : pct + " %"),
+        el("span", { class: "bar" }, [el("i", { style: `width:${Math.min(100, pct || 0)}%` })]),
+      ]);
+      rows.push(fila);
     };
     sec("Macronutrientes"); NP.nutri.MACROS.forEach(([k, l, u]) => row(k, l, u));
     sec("Minerales"); NP.nutri.MINERALES.forEach(([k, l, u]) => row(k, l, u));
     sec("Vitaminas"); NP.nutri.VITAMINAS.forEach(([k, l, u]) => row(k, l, u));
     const grid = el("div", { class: "nut-grid" }, rows);
     const wrap = el("div", {}, [grid]);
+    if (refs) wrap.appendChild(el("div", { class: "nut-leyenda" }, [
+      el("span", { class: "lg bajo" }, "No llega al objetivo"),
+      el("span", { class: "lg alto" }, "Se pasa del límite"),
+      el("span", { class: "lg ok" }, "Cubierto"),
+      cobs ? el("span", { class: "lg sindatos" }, "s/d · la tabla de alimentos no lo mide") : null,
+    ]));
     if (faltantes && faltantes.length) wrap.appendChild(el("div", { class: "small muted", style: "margin-top:10px" },
       "* Valor incompleto: algún ingrediente no tiene ese dato en BEDCA (se completaría con USDA)."));
+    if (refs) wrap.appendChild(el("div", { class: "small muted", style: "margin-top:8px;line-height:1.45" },
+      NP.dri.CREDITO));
     return wrap;
   }
 
@@ -353,7 +398,7 @@ NP.comp.alimentoRapido = function ({ title, onSave }) {
 /* ---------- Vista: explorador de recetas ---------- */
 NP.views.recetas = function (view) {
   const { el } = NP.util;
-  let estado = { q: "", tipo: "", soloFav: false };
+  let estado = { q: "", tipo: "", soloFav: false, soloPropias: false };
 
   const grid = el("div", { class: "grid grid-cards" });
   const q = el("input", { placeholder: "Buscar entre 3.000 recetas...", class: "grow" });
@@ -368,28 +413,42 @@ NP.views.recetas = function (view) {
 
   const info = el("span", { class: "muted small" });
 
-  const favToggle = el("button", { class: "btn", onclick: () => {
+  const favToggle = el("button", { class: "btn", title: "Ver solo las recetas marcadas con ★", onclick: () => {
     estado.soloFav = !estado.soloFav;
     favToggle.classList.toggle("btn-primary", estado.soloFav);
     favToggle.textContent = estado.soloFav ? "★ Viendo favoritas" : "☆ Favoritas";
     refresh();
   } }, "☆ Favoritas");
 
+  // Recetas creadas por el propio nutricionista (las del constructor)
+  const propiasToggle = el("button", { class: "btn", title: "Ver solo las recetas que has creado tú", onclick: () => {
+    estado.soloPropias = !estado.soloPropias;
+    propiasToggle.classList.toggle("btn-primary", estado.soloPropias);
+    propiasToggle.textContent = estado.soloPropias ? "✎ Viendo mis recetas" : "✎ Mis recetas";
+    refresh();
+  } }, "✎ Mis recetas");
+
   function refresh() {
-    const res = NP.data.buscarRecetas({ q: estado.q, tipo: estado.tipo, limite: 120, soloFav: estado.soloFav });
+    const res = NP.data.buscarRecetas({ q: estado.q, tipo: estado.tipo, limite: 120, soloFav: estado.soloFav, soloPropias: estado.soloPropias });
     const nFav = NP.store.getFavoritas().length;
+    const nProp = NP.store.getPropias().length;
     info.textContent = `${res.length} resultado(s)` + (res.length === 120 ? "+ (afina la búsqueda)" : "") +
-      ` · ${nFav} favorita(s)`;
+      ` · ${nFav} favorita(s) · ${nProp} propia(s)`;
     grid.innerHTML = "";
     res.forEach((r) => grid.appendChild(NP.comp.recipeCard(r,
       (rec) => NP.comp.recipeDetail(rec),
       () => { if (estado.soloFav) refresh(); else info.textContent = info.textContent.replace(/\d+ favorita/, NP.store.getFavoritas().length + " favorita"); })));
-    if (!res.length) grid.appendChild(el("div", { class: "empty" }, estado.soloFav
-      ? "Aún no tienes recetas favoritas. Pulsa ☆ en cualquier receta para guardarla aquí."
-      : "Sin resultados."));
+    if (!res.length) grid.appendChild(el("div", { class: "empty" },
+      estado.soloPropias && !nProp
+        ? "Aún no has creado ninguna receta. Ve a Constructor para crear la primera."
+        : estado.soloPropias
+          ? "Ninguna de tus recetas encaja con este filtro."
+          : estado.soloFav
+            ? "Aún no tienes recetas favoritas. Pulsa ☆ en cualquier receta para guardarla aquí."
+            : "Sin resultados."));
   }
 
-  view.appendChild(el("div", { class: "toolbar" }, [q, seg, favToggle]));
+  view.appendChild(el("div", { class: "toolbar" }, [q, seg, favToggle, propiasToggle]));
   view.appendChild(el("div", { style: "margin-bottom:12px" }, [info]));
   view.appendChild(grid);
   refresh();

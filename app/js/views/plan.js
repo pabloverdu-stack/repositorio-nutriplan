@@ -673,6 +673,12 @@ NP.views.plan = function (view, planId) {
   const nutDia = (day) => NP.nutri.sumNutriciones(
     plan.comidas.map((c) => NP.slot.nutricion(plan.dias[day][c.key], c.tipo)));
   const nutSemana = () => NP.nutri.sumNutriciones(NP.DIAS.map((d) => nutDia(d.key)));
+  // Ingredientes de todos los platos del día, para medir qué nutrientes trae realmente la tabla BEDCA
+  const cobDia = (day) => NP.nutri.cobertura(
+    plan.comidas.reduce((acc, c) => acc.concat(
+      NP.slot.comidas(plan.dias[day][c.key], c.tipo).reduce((a, m) => a.concat(
+        (m.ingredientes || []).map((i) => ({ f_id: i.f_id, g: i.gramos }))), [])), []),
+    NP.data.catalogo);
   // Multiplica todos los nutrientes por un factor (para la media diaria)
   const escalar = (n, f) => {
     const o = {}; NP.nutri.CLAVES.forEach((k) => (o[k] = Math.round((n[k] || 0) * f * 10) / 10)); return o;
@@ -742,8 +748,95 @@ NP.views.plan = function (view, planId) {
       kpiSide(fmt(n.hidratos_g, 1) + " g", "Hidratos"), kpiSide(fmt(n.grasas_g, 1) + " g", "Grasas"),
     ]));
     sideWrap.appendChild(NP.comp.macroBar(n));
+
+    // Referencias oficiales EFSA para este paciente. En "total 7 días" se multiplican por 7.
+    const perf = NP.dri.perfil(pac);
+    const factor = sel.modo === "semana" && sel.semana === "total" ? 7 : 1;
+    const refs = NP.dri.referencias(perf, factor);
+    // Cobertura de la tabla de composición: evita marcar en rojo lo que BEDCA no mide
+    const cobs = NP.nutri.pctCobertura(sel.modo === "dia"
+      ? cobDia(sel.dia)
+      : NP.nutri.sumCoberturas(NP.DIAS.map((d) => cobDia(d.key))));
+    const res = NP.dri.resumen(n, refs, cobs);
+
     sideWrap.appendChild(el("div", { class: "side-ttl", style: "margin-top:16px" }, "Conteo nutricional"));
-    sideWrap.appendChild(NP.comp.nutritionTable(n));
+    sideWrap.appendChild(el("div", { class: "dri-perfil" }, [
+      el("span", { class: "grow small" }, [
+        el("b", {}, "Objetivos: "), NP.dri.describir(perf),
+        factor > 1 ? el("span", { class: "muted" }, " · ×7 días") : null,
+      ]),
+      el("button", {
+        class: "icon-btn", title: "Ajustar el perfil de referencia (embarazo, lactancia, fitatos...)",
+        style: "width:26px;height:26px;font-size:13px", onclick: editarPerfilDri,
+      }, "⚙"),
+    ]));
+    if (perf.sinPaciente || !perf.edadReal) sideWrap.appendChild(el("div", { class: "small muted", style: "margin-bottom:8px" },
+      perf.sinPaciente
+        ? "Este plan no tiene paciente: se usan referencias de adulto de 30 años."
+        : "Sin fecha de nacimiento: se asume 30 años. Ajusta la edad con ⚙ o rellena la ficha."));
+    if (perf.sexo === "indeterminado") sideWrap.appendChild(el("div", { class: "small muted", style: "margin-bottom:8px" },
+      "Sexo sin indicar: se toma en cada nutriente el valor más exigente de los dos."));
+
+    sideWrap.appendChild(el("div", {
+      class: "dri-resumen " + (res.bajos.length ? "hay-fallos" : "todo-ok"),
+    }, [
+      el("b", {}, `${res.ok} de ${res.total} objetivos cubiertos`),
+      res.bajos.length ? el("div", { class: "small", style: "margin-top:4px" },
+        "Falta: " + res.bajos.join(", ")) : null,
+      res.altos.length ? el("div", { class: "small", style: "margin-top:4px" },
+        "Se pasa de: " + res.altos.join(", ")) : null,
+      res.sinDatos.length ? el("div", { class: "small", style: "margin-top:4px" },
+        "Sin datos en la tabla de alimentos: " + res.sinDatos.join(", ")) : null,
+    ]));
+    sideWrap.appendChild(NP.comp.nutritionTable(n, [], refs, cobs));
+  }
+
+  // Ajustes del perfil de referencia. Se guardan en el paciente (p.dri) para todos sus planes.
+  function editarPerfilDri() {
+    const perf = NP.dri.perfil(pac);
+    const fEdad = el("input", { type: "number", min: 1, max: 110, value: perf.edad });
+    const fEstado = el("select", {}, [
+      ["normal", "Ninguno"], ["embarazo", "Embarazo"], ["lactancia", "Lactancia"],
+    ].map(([v, l]) => el("option", { value: v, ...(v === perf.estado ? { selected: true } : {}) }, l)));
+    const fMeno = el("select", {}, [
+      ["no", "Premenopáusica (hierro 16 mg/día)"], ["si", "Posmenopáusica (hierro 11 mg/día)"],
+    ].map(([v, l]) => el("option", { value: v, ...((v === "si") === perf.menopausia ? { selected: true } : {}) }, l)));
+    const fFit = el("select", {}, [
+      [300, "300 mg · dieta baja en cereales integrales y legumbres"],
+      [600, "600 mg · dieta mixta europea habitual"],
+      [900, "900 mg · muchos integrales y legumbres"],
+      [1200, "1.200 mg · vegetariana/vegana rica en integrales"],
+    ].map(([v, l]) => el("option", { value: String(v), ...(v === perf.fitatos ? { selected: true } : {}) }, l)));
+
+    const body = el("div", {}, [
+      el("div", { class: "small muted", style: "margin-bottom:12px;line-height:1.5" },
+        "Las necesidades de vitaminas y minerales cambian con la edad, el sexo y la situación " +
+        "fisiológica. Estos ajustes se guardan en la ficha del paciente."),
+      el("label", { class: "field" }, [el("span", {}, "Edad para las referencias (años)"), fEdad]),
+      el("label", { class: "field" }, [el("span", {}, "Situación fisiológica"), fEstado]),
+      perf.sexo === "hombre" ? null
+        : el("label", { class: "field" }, [el("span", {}, "Estado menstrual (afecta al hierro)"), fMeno]),
+      el("label", { class: "field" }, [el("span", {}, "Fitatos de la dieta (afecta al zinc)"), fFit]),
+    ]);
+    const m = NP.util.modal({
+      title: "Perfil de referencia (EFSA)", body,
+      footer: [
+        el("button", { class: "btn btn-ghost", onclick: () => m.close() }, "Cancelar"),
+        el("button", {
+          class: "btn btn-primary", onclick: () => {
+            if (!pac) { toast("Este plan no tiene paciente donde guardar el perfil"); return; }
+            pac.dri = {
+              edad: Number(fEdad.value) || null,
+              estado: fEstado.value,
+              menopausia: fMeno.value === "si",
+              fitatos: Number(fFit.value),
+            };
+            NP.store.savePaciente(pac);
+            m.close(); buildSide(); toast("Referencias actualizadas");
+          },
+        }, "Aplicar"),
+      ],
+    });
   }
   const kpiSide = (v, l) => el("div", { class: "kpi" }, [el("div", { class: "v" }, v), el("div", { class: "l" }, l)]);
 

@@ -53,6 +53,41 @@ NP.nutri = (function () {
     return tot;
   }
 
+  /* ---- Cobertura de la tabla de composición ----
+     BEDCA no mide todos los nutrientes en todos los alimentos: la biotina, el cobre o el
+     manganeso solo constan en un puñado de registros. Sin esto, esos nutrientes saldrían
+     siempre "por debajo del objetivo" aunque la dieta fuese correcta. Se mide qué parte de
+     los gramos del plato/plan viene de alimentos que SÍ tienen ese dato. */
+  function cobertura(ings, catalogo) {
+    const con = {}; CLAVES.forEach((k) => (con[k] = 0));
+    let total = 0;
+    ings.forEach((ing) => {
+      const g = Number(ing.g) || 0;
+      if (!g) return;
+      total += g;
+      const a = catalogo[ing.f_id];
+      if (!a) return;
+      CLAVES.forEach((k) => { if (a.nut[k] != null) con[k] += g; });
+    });
+    return { total, con };
+  }
+  function sumCoberturas(lista) {
+    const con = {}; CLAVES.forEach((k) => (con[k] = 0));
+    let total = 0;
+    lista.forEach((c) => {
+      if (!c) return;
+      total += c.total;
+      CLAVES.forEach((k) => (con[k] += c.con[k] || 0));
+    });
+    return { total, con };
+  }
+  /** Fracción 0..1 de gramos con dato para cada nutriente. null si no hay comida asignada. */
+  function pctCobertura(c) {
+    if (!c || !c.total) return null;
+    const o = {}; CLAVES.forEach((k) => (o[k] = c.con[k] / c.total));
+    return o;
+  }
+
   // Reparto calórico H/P/G (para las barras). Devuelve % de kcal de cada macro.
   function macroPct(n) {
     const h = (n.hidratos_g || 0) * 4, p = (n.proteinas_g || 0) * 4, g = (n.grasas_g || 0) * 9;
@@ -60,5 +95,6 @@ NP.nutri = (function () {
     return { h: (h / t) * 100, p: (p / t) * 100, g: (g / t) * 100 };
   }
 
-  return { MACROS, MINERALES, VITAMINAS, TODOS, CLAVES, sumIngredientes, sumNutriciones, macroPct };
+  return { MACROS, MINERALES, VITAMINAS, TODOS, CLAVES, sumIngredientes, sumNutriciones, macroPct,
+           cobertura, sumCoberturas, pctCobertura };
 })();

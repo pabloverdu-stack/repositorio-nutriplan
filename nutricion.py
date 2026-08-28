@@ -33,6 +33,19 @@ MAP = {
 }
 FOLATO_FALLBACK = "487"  # acido folico, si falta folato total (472)
 
+# BEDCA apenas mide cobre, manganeso, acido pantotenico y azucares (13-17 % de sus
+# alimentos). Los huecos se rellenan con USDA FoodData Central (SR Legacy) a partir de
+# correspondencias revisadas una a una. Ver datos_usda/ y el informe en la raiz.
+# BEDCA siempre manda: solo se rellena lo que falta.
+RELLENO_USDA = os.path.join(BASE_DIR, "datos_usda", "relleno.json")
+
+
+def _cargar_relleno():
+    try:
+        return json.load(open(RELLENO_USDA, encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
 # orden y etiqueta legible de cada nutriente para exportar
 NUTRIENTES = [
     ("energia_kcal", "Energia (kcal)"),
@@ -66,8 +79,9 @@ def _num(v):
         return None
 
 
-def cargar_catalogo():
+def cargar_catalogo(con_usda=True):
     data = json.load(open(RAW, encoding="utf-8-sig"))
+    relleno = _cargar_relleno() if con_usda else {}
     cat = {}
     for f in data:
         comp = f.get("comp") or {}
@@ -83,6 +97,9 @@ def cargar_catalogo():
             v = _num(comp[FOLATO_FALLBACK].get("value"))
             if v is not None:
                 nut["folato_ug"] = v
+        # huecos rellenados desde USDA (nunca pisan un valor de BEDCA)
+        for clave, valor in relleno.get(f["f_id"], {}).items():
+            nut.setdefault(clave, valor)
         # energia Atwater desde macros
         prot = nut.get("proteinas_g", 0); hc = nut.get("hidratos_g", 0)
         gra = nut.get("grasas_g", 0); fib = nut.get("fibra_g", 0)

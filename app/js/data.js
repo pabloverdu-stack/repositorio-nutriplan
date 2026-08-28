@@ -61,9 +61,10 @@ NP.data = (function () {
   const encajaTipo = (r, tipo) =>
     r.tipo === tipo || (Array.isArray(r.apto) && r.apto.indexOf(tipo) >= 0);
 
-  function buscarRecetas({ q = "", tipo = "", limite = 120, soloFav = false } = {}) {
+  function buscarRecetas({ q = "", tipo = "", limite = 120, soloFav = false, soloPropias = false } = {}) {
     const toks = tokens(q);
     let base = tipo ? todasRecetas().filter((r) => encajaTipo(r, tipo)) : todasRecetas();
+    if (soloPropias) base = base.filter((r) => r.propia);
     if (soloFav) {
       const favs = new Set(NP.store.getFavoritas());
       base = base.filter((r) => favs.has(r.id));

@@ -1,0 +1,951 @@
+{
+ "953": {
+  "cobre_mg": 0.009,
+  "manganeso_mg": 0.004,
+  "pantotenico_mg": 0.389,
+  "azucares_g": 4.66
+ },
+ "2520": {
+  "cobre_mg": 0.017,
+  "manganeso_mg": 0.009,
+  "pantotenico_mg": 0.331,
+  "azucares_g": 4.0
+ },
+ "118": {
+  "cobre_mg": 0.017,
+  "manganeso_mg": 0.009,
+  "pantotenico_mg": 0.331,
+  "azucares_g": 4.0
+ },
+ "1319": {
+  "cobre_mg": 0.006,
+  "manganeso_mg": 0.014,
+  "pantotenico_mg": 0.356,
+  "azucares_g": 5.06
+ },
+ "1694": {
+  "cobre_mg": 0.025,
+  "manganeso_mg": 0.004,
+  "pantotenico_mg": 0.373,
+  "azucares_g": 5.05
+ },
+ "1316": {
+  "cobre_mg": 0.013,
+  "manganeso_mg": 0.003,
+  "pantotenico_mg": 0.357,
+  "azucares_g": 5.09
+ },
+ "1845": {
+  "cobre_mg": 0.128,
+  "manganeso_mg": 0.223,
+  "pantotenico_mg": 0.373,
+  "azucares_g": 3.99
+ },
+ "2517": {
+  "cobre_mg": 0.029,
+  "manganeso_mg": 0.002,
+  "pantotenico_mg": 0.557,
+  "azucares_g": 2.67
+ },
+ "1794": {
+  "cobre_mg": 0.029,
+  "manganeso_mg": 0.002,
+  "pantotenico_mg": 0.557,
+  "azucares_g": 2.67
+ },
+ "2510": {
+  "cobre_mg": 0.011,
+  "manganeso_mg": 0.03,
+  "pantotenico_mg": 0.141,
+  "azucares_g": 0.0
+ },
+ "1903": {
+  "cobre_mg": 0.011,
+  "manganeso_mg": 0.03,
+  "pantotenico_mg": 0.141,
+  "azucares_g": 0.0
+ },
+ "1901": {
+  "cobre_mg": 0.035,
+  "manganeso_mg": 0.024,
+  "pantotenico_mg": 0.481,
+  "azucares_g": 0.27
+ },
+ "1872": {
+  "cobre_mg": 0.032,
+  "manganeso_mg": 0.02,
+  "pantotenico_mg": 0.453,
+  "azucares_g": 0.11
+ },
+ "940": {
+  "cobre_mg": 0.046,
+  "manganeso_mg": 0.041,
+  "pantotenico_mg": 0.403
+ },
+ "2127": {
+  "cobre_mg": 0.072,
+  "manganeso_mg": 0.028,
+  "pantotenico_mg": 1.533,
+  "azucares_g": 0.37
+ },
+ "2126": {
+  "cobre_mg": 0.013,
+  "manganeso_mg": 0.026,
+  "pantotenico_mg": 1.398,
+  "azucares_g": 1.12
+ },
+ "545": {
+  "cobre_mg": 0.078,
+  "manganeso_mg": 0.03,
+  "pantotenico_mg": 1.66
+ },
+ "2403": {
+  "cobre_mg": 0.11,
+  "manganeso_mg": 0.153,
+  "pantotenico_mg": 0.295,
+  "azucares_g": 0.82
+ },
+ "312": {
+  "azucares_g": 1.7
+ },
+ "1894": {
+  "cobre_mg": 0.017,
+  "manganeso_mg": 0.112,
+  "pantotenico_mg": 0.317,
+  "azucares_g": 4.2
+ },
+ "1847": {
+  "cobre_mg": 0.066,
+  "manganeso_mg": 0.122,
+  "pantotenico_mg": 0.099,
+  "azucares_g": 2.4
+ },
+ "2387": {
+  "cobre_mg": 0.018,
+  "manganeso_mg": 0.132,
+  "pantotenico_mg": 0.508,
+  "azucares_g": 2.08
+ },
+ "1776": {
+  "cobre_mg": 0.053,
+  "manganeso_mg": 0.177,
+  "pantotenico_mg": 0.204,
+  "azucares_g": 2.5
+ },
+ "2376": {
+  "cobre_mg": 0.053,
+  "manganeso_mg": 0.177,
+  "pantotenico_mg": 0.204,
+  "azucares_g": 2.5
+ },
+ "1892": {
+  "cobre_mg": 0.045,
+  "manganeso_mg": 0.143,
+  "pantotenico_mg": 0.273,
+  "azucares_g": 4.74
+ },
+ "2384": {
+  "cobre_mg": 0.318,
+  "manganeso_mg": 0.047,
+  "pantotenico_mg": 1.497,
+  "azucares_g": 1.98
+ },
+ "2008": {
+  "cobre_mg": 0.244,
+  "manganeso_mg": 0.113,
+  "pantotenico_mg": 1.294,
+  "azucares_g": 1.11
+ },
+ "1175": {
+  "cobre_mg": 0.124,
+  "manganeso_mg": 0.336,
+  "pantotenico_mg": 0.547
+ },
+ "1678": {
+  "cobre_mg": 0.106,
+  "manganeso_mg": 0.213,
+  "pantotenico_mg": 0.24,
+  "azucares_g": 2.99
+ },
+ "151": {
+  "azucares_g": 1.88
+ },
+ "2198": {
+  "cobre_mg": 0.069,
+  "manganeso_mg": 0.216,
+  "pantotenico_mg": 0.225,
+  "azucares_g": 3.26
+ },
+ "1919": {
+  "cobre_mg": 0.069,
+  "manganeso_mg": 0.216,
+  "pantotenico_mg": 0.225,
+  "azucares_g": 3.26
+ },
+ "2397": {
+  "cobre_mg": 0.057,
+  "manganeso_mg": 0.285,
+  "pantotenico_mg": 0.074,
+  "azucares_g": 3.63
+ },
+ "2395": {
+  "cobre_mg": 0.174,
+  "manganeso_mg": 0.935,
+  "pantotenico_mg": 0.145,
+  "azucares_g": 0.43
+ },
+ "1922": {
+  "cobre_mg": 0.179,
+  "manganeso_mg": 0.366,
+  "pantotenico_mg": 0.172,
+  "azucares_g": 1.1
+ },
+ "1183": {
+  "manganeso_mg": 0.089,
+  "azucares_g": 2.08
+ },
+ "1920": {
+  "cobre_mg": 0.127,
+  "manganeso_mg": 0.125,
+  "pantotenico_mg": 0.298,
+  "azucares_g": 2.76
+ },
+ "2378": {
+  "cobre_mg": 0.127,
+  "manganeso_mg": 0.125,
+  "pantotenico_mg": 0.298,
+  "azucares_g": 2.76
+ },
+ "1773": {
+  "cobre_mg": 0.039,
+  "manganeso_mg": 0.129,
+  "pantotenico_mg": 0.123,
+  "azucares_g": 4.24
+ },
+ "1979": {
+  "cobre_mg": 0.067,
+  "manganeso_mg": 0.153,
+  "pantotenico_mg": 0.113,
+  "azucares_g": 4.73
+ },
+ "1921": {
+  "cobre_mg": 0.081,
+  "manganeso_mg": 0.232,
+  "pantotenico_mg": 0.281,
+  "azucares_g": 3.53
+ },
+ "1775": {
+  "cobre_mg": 0.048,
+  "manganeso_mg": 0.155,
+  "pantotenico_mg": 0.142,
+  "azucares_g": 1.19
+ },
+ "2399": {
+  "cobre_mg": 0.048,
+  "manganeso_mg": 0.155,
+  "pantotenico_mg": 0.142,
+  "azucares_g": 1.19
+ },
+ "2407": {
+  "cobre_mg": 0.041,
+  "manganeso_mg": 0.079,
+  "pantotenico_mg": 0.259,
+  "azucares_g": 1.67
+ },
+ "1772": {
+  "cobre_mg": 0.041,
+  "manganeso_mg": 0.079,
+  "pantotenico_mg": 0.259,
+  "azucares_g": 1.67
+ },
+ "2411": {
+  "cobre_mg": 0.12,
+  "manganeso_mg": 0.481,
+  "pantotenico_mg": 0.14,
+  "azucares_g": 3.9
+ },
+ "1774": {
+  "cobre_mg": 0.299,
+  "manganeso_mg": 1.672,
+  "pantotenico_mg": 0.596,
+  "azucares_g": 1.0
+ },
+ "2361": {
+  "cobre_mg": 0.299,
+  "manganeso_mg": 1.672,
+  "pantotenico_mg": 0.596,
+  "azucares_g": 1.0
+ },
+ "1879": {
+  "cobre_mg": 0.059,
+  "manganeso_mg": 0.114,
+  "pantotenico_mg": 0.089,
+  "azucares_g": 2.63
+ },
+ "2421": {
+  "cobre_mg": 0.059,
+  "manganeso_mg": 0.114,
+  "pantotenico_mg": 0.089,
+  "azucares_g": 2.63
+ },
+ "1759": {
+  "cobre_mg": 0.115,
+  "manganeso_mg": 0.113,
+  "pantotenico_mg": 0.309,
+  "azucares_g": 3.56
+ },
+ "2406": {
+  "cobre_mg": 0.085,
+  "manganeso_mg": 0.011,
+  "pantotenico_mg": 0.038,
+  "azucares_g": 1.06
+ },
+ "1623": {
+  "cobre_mg": 0.17,
+  "manganeso_mg": 0.149,
+  "pantotenico_mg": 1.463,
+  "azucares_g": 0.3
+ },
+ "2231": {
+  "cobre_mg": 0.027,
+  "manganeso_mg": 0.035,
+  "pantotenico_mg": 0.061,
+  "azucares_g": 10.39
+ },
+ "2245": {
+  "cobre_mg": 0.078,
+  "manganeso_mg": 0.27,
+  "pantotenico_mg": 0.334,
+  "azucares_g": 12.23
+ },
+ "1737": {
+  "cobre_mg": 0.078,
+  "manganeso_mg": 0.27,
+  "pantotenico_mg": 0.334,
+  "azucares_g": 12.23
+ },
+ "2225": {
+  "cobre_mg": 0.048,
+  "manganeso_mg": 0.386,
+  "pantotenico_mg": 0.125,
+  "azucares_g": 4.89
+ },
+ "1671": {
+  "cobre_mg": 0.048,
+  "manganeso_mg": 0.386,
+  "pantotenico_mg": 0.125,
+  "azucares_g": 4.89
+ },
+ "2235": {
+  "cobre_mg": 0.045,
+  "manganeso_mg": 0.025,
+  "pantotenico_mg": 0.25,
+  "azucares_g": 9.35
+ },
+ "1729": {
+  "cobre_mg": 0.082,
+  "manganeso_mg": 0.048,
+  "pantotenico_mg": 0.049,
+  "azucares_g": 9.75
+ },
+ "2228": {
+  "cobre_mg": 0.13,
+  "manganeso_mg": 0.098,
+  "pantotenico_mg": 0.183,
+  "azucares_g": 8.99
+ },
+ "1689": {
+  "cobre_mg": 0.13,
+  "manganeso_mg": 0.098,
+  "pantotenico_mg": 0.183,
+  "azucares_g": 8.99
+ },
+ "2011": {
+  "cobre_mg": 0.057,
+  "manganeso_mg": 0.336,
+  "pantotenico_mg": 0.124,
+  "azucares_g": 9.96
+ },
+ "2368": {
+  "cobre_mg": 0.057,
+  "manganeso_mg": 0.336,
+  "pantotenico_mg": 0.124,
+  "azucares_g": 9.96
+ },
+ "2220": {
+  "cobre_mg": 0.06,
+  "manganeso_mg": 0.07,
+  "pantotenico_mg": 0.199,
+  "azucares_g": 12.82
+ },
+ "1705": {
+  "cobre_mg": 0.042,
+  "manganeso_mg": 0.039,
+  "pantotenico_mg": 0.216,
+  "azucares_g": 10.58
+ },
+ "1017": {
+  "cobre_mg": 0.127,
+  "manganeso_mg": 0.071
+ },
+ "2227": {
+  "cobre_mg": 0.07,
+  "manganeso_mg": 0.128,
+  "pantotenico_mg": 0.3,
+  "azucares_g": 16.26
+ },
+ "1711": {
+  "cobre_mg": 0.068,
+  "manganeso_mg": 0.061,
+  "pantotenico_mg": 0.153,
+  "azucares_g": 8.39
+ },
+ "2234": {
+  "cobre_mg": 0.041,
+  "manganeso_mg": 0.041,
+  "pantotenico_mg": 0.105,
+  "azucares_g": 7.86
+ },
+ "2247": {
+  "cobre_mg": 0.042,
+  "manganeso_mg": 0.038,
+  "pantotenico_mg": 0.221,
+  "azucares_g": 6.2
+ },
+ "2224": {
+  "cobre_mg": 0.362,
+  "manganeso_mg": 0.296,
+  "pantotenico_mg": 0.805,
+  "azucares_g": 66.47
+ },
+ "1762": {
+  "cobre_mg": 0.272,
+  "manganeso_mg": 0.281,
+  "azucares_g": 65.18
+ },
+ "1962": {
+  "cobre_mg": 0.101,
+  "manganeso_mg": 1.08,
+  "pantotenico_mg": 0.1,
+  "azucares_g": 16.9
+ },
+ "411": {
+  "cobre_mg": 0.016,
+  "manganeso_mg": 0.012,
+  "pantotenico_mg": 0.131
+ },
+ "1117": {
+  "cobre_mg": 0.289,
+  "manganeso_mg": 0.917,
+  "pantotenico_mg": 0.431
+ },
+ "1364": {
+  "cobre_mg": 0.289,
+  "manganeso_mg": 0.917,
+  "pantotenico_mg": 0.431,
+  "azucares_g": 2.67
+ },
+ "1074": {
+  "azucares_g": 2.74
+ },
+ "1630": {
+  "cobre_mg": 0.22,
+  "manganeso_mg": 1.088,
+  "pantotenico_mg": 1.014,
+  "azucares_g": 0.12
+ },
+ "904": {
+  "azucares_g": 0.66
+ },
+ "56": {
+  "azucares_g": 0.66
+ },
+ "1083": {
+  "cobre_mg": 0.59,
+  "manganeso_mg": 2.033,
+  "pantotenico_mg": 0.772
+ },
+ "1010": {
+  "azucares_g": 0.99
+ },
+ "59": {
+  "azucares_g": 0.99
+ },
+ "2163": {
+  "cobre_mg": 0.227,
+  "manganeso_mg": 2.174,
+  "pantotenico_mg": 0.646,
+  "azucares_g": 4.34
+ },
+ "2164": {
+  "cobre_mg": 0.67,
+  "manganeso_mg": 2.545,
+  "pantotenico_mg": 0.722,
+  "azucares_g": 5.77
+ },
+ "1810": {
+  "cobre_mg": 0.101,
+  "manganeso_mg": 0.536,
+  "pantotenico_mg": 0.536,
+  "azucares_g": 5.67
+ },
+ "2160": {
+  "cobre_mg": 0.101,
+  "manganeso_mg": 0.536,
+  "pantotenico_mg": 0.536,
+  "azucares_g": 5.67
+ },
+ "1792": {
+  "cobre_mg": 0.138,
+  "manganeso_mg": 0.421,
+  "pantotenico_mg": 0.278,
+  "azucares_g": 6.2
+ },
+ "1912": {
+  "cobre_mg": 0.186,
+  "manganeso_mg": 0.824,
+  "pantotenico_mg": 0.44,
+  "azucares_g": 3.85
+ },
+ "2174": {
+  "cobre_mg": 0.109,
+  "manganeso_mg": 0.512,
+  "pantotenico_mg": 0.555,
+  "azucares_g": 7.28
+ },
+ "2171": {
+  "cobre_mg": 0.255,
+  "manganeso_mg": 0.919,
+  "pantotenico_mg": 0.552,
+  "azucares_g": 6.2
+ },
+ "1292": {
+  "cobre_mg": 0.153,
+  "manganeso_mg": 0.818,
+  "pantotenico_mg": 0.299,
+  "azucares_g": 2.59
+ },
+ "1126": {
+  "cobre_mg": 0.251,
+  "manganeso_mg": 0.494,
+  "pantotenico_mg": 0.638
+ },
+ "1324": {
+  "cobre_mg": 0.251,
+  "manganeso_mg": 0.494,
+  "pantotenico_mg": 0.638,
+  "azucares_g": 1.8
+ },
+ "898": {
+  "cobre_mg": 0.232,
+  "manganeso_mg": 0.515,
+  "pantotenico_mg": 0.185
+ },
+ "1121": {
+  "cobre_mg": 0.378,
+  "manganeso_mg": 1.181,
+  "pantotenico_mg": 0.133
+ },
+ "2155": {
+  "cobre_mg": 0.647,
+  "manganeso_mg": 3.996,
+  "pantotenico_mg": 0.752,
+  "azucares_g": 19.8
+ },
+ "2065": {
+  "cobre_mg": 0.647,
+  "manganeso_mg": 3.996,
+  "pantotenico_mg": 0.752,
+  "azucares_g": 19.8
+ },
+ "1878": {
+  "cobre_mg": 0.647,
+  "manganeso_mg": 3.996,
+  "pantotenico_mg": 0.752,
+  "azucares_g": 19.8
+ },
+ "2347": {
+  "cobre_mg": 0.031,
+  "manganeso_mg": 0.104,
+  "pantotenico_mg": 0.216,
+  "azucares_g": 0.0
+ },
+ "2626": {
+  "cobre_mg": 0.045,
+  "manganeso_mg": 0.011,
+  "pantotenico_mg": 1.547,
+  "azucares_g": 0.0
+ },
+ "2302": {
+  "cobre_mg": 0.028,
+  "manganeso_mg": 0.015,
+  "pantotenico_mg": 0.153,
+  "azucares_g": 0.0
+ },
+ "1915": {
+  "cobre_mg": 0.028,
+  "manganeso_mg": 0.015,
+  "pantotenico_mg": 0.153,
+  "azucares_g": 0.0
+ },
+ "2623": {
+  "cobre_mg": 0.028,
+  "manganeso_mg": 0.024,
+  "pantotenico_mg": 0.15
+ },
+ "2344": {
+  "cobre_mg": 0.019,
+  "manganeso_mg": 0.015,
+  "pantotenico_mg": 0.75,
+  "azucares_g": 0.0
+ },
+ "2029": {
+  "cobre_mg": 0.024,
+  "manganeso_mg": 0.02,
+  "pantotenico_mg": 0.87
+ },
+ "800": {
+  "cobre_mg": 0.11,
+  "manganeso_mg": 0.02,
+  "pantotenico_mg": 1.37
+ },
+ "2636": {
+  "cobre_mg": 0.046,
+  "manganeso_mg": 0.011,
+  "pantotenico_mg": 1.667,
+  "azucares_g": 0.0
+ },
+ "2134": {
+  "cobre_mg": 0.036,
+  "manganeso_mg": 0.011,
+  "pantotenico_mg": 0.28,
+  "azucares_g": 0.0
+ },
+ "2341": {
+  "cobre_mg": 0.019,
+  "manganeso_mg": 0.014,
+  "pantotenico_mg": 0.185,
+  "azucares_g": 0.0
+ },
+ "2336": {
+  "cobre_mg": 0.019,
+  "manganeso_mg": 0.014,
+  "pantotenico_mg": 0.185
+ },
+ "1934": {
+  "cobre_mg": 0.073,
+  "manganeso_mg": 0.015,
+  "pantotenico_mg": 0.856,
+  "azucares_g": 0.0
+ },
+ "2630": {
+  "cobre_mg": 0.186,
+  "manganeso_mg": 0.108,
+  "pantotenico_mg": 0.642,
+  "azucares_g": 0.0
+ },
+ "2316": {
+  "cobre_mg": 0.211,
+  "manganeso_mg": 0.07,
+  "pantotenico_mg": 0.645,
+  "azucares_g": 0.0
+ },
+ "2131": {
+  "cobre_mg": 0.071,
+  "manganeso_mg": 0.015,
+  "pantotenico_mg": 0.37,
+  "azucares_g": 0.0
+ },
+ "2042": {
+  "cobre_mg": 0.071,
+  "manganeso_mg": 0.015,
+  "pantotenico_mg": 0.37,
+  "azucares_g": 0.0
+ },
+ "807": {
+  "cobre_mg": 1.891,
+  "manganeso_mg": 0.035,
+  "pantotenico_mg": 0.5,
+  "azucares_g": 0.0
+ },
+ "2635": {
+  "cobre_mg": 0.587,
+  "manganeso_mg": 0.11,
+  "pantotenico_mg": 0.5
+ },
+ "1854": {
+  "cobre_mg": 0.587,
+  "manganeso_mg": 0.11,
+  "pantotenico_mg": 0.5
+ },
+ "1738": {
+  "cobre_mg": 0.435,
+  "manganeso_mg": 0.025,
+  "pantotenico_mg": 0.5,
+  "azucares_g": 0.0
+ },
+ "1710": {
+  "cobre_mg": 0.094,
+  "manganeso_mg": 3.4,
+  "pantotenico_mg": 0.5,
+  "azucares_g": 0.0
+ },
+ "2345": {
+  "cobre_mg": 0.094,
+  "manganeso_mg": 3.4,
+  "pantotenico_mg": 0.5,
+  "azucares_g": 0.0
+ },
+ "824": {
+  "cobre_mg": 0.149,
+  "manganeso_mg": 6.8,
+  "pantotenico_mg": 0.95
+ },
+ "2020": {
+  "cobre_mg": 0.258,
+  "manganeso_mg": 0.049,
+  "pantotenico_mg": 0.519,
+  "azucares_g": 0.0
+ },
+ "2337": {
+  "cobre_mg": 0.258,
+  "manganeso_mg": 0.049,
+  "pantotenico_mg": 0.519,
+  "azucares_g": 0.0
+ },
+ "817": {
+  "cobre_mg": 0.182,
+  "manganeso_mg": 0.029,
+  "pantotenico_mg": 0.31,
+  "azucares_g": 0.0
+ },
+ "994": {
+  "azucares_g": 0.0
+ },
+ "1899": {
+  "cobre_mg": 0.049,
+  "manganeso_mg": 0.017,
+  "pantotenico_mg": 0.965,
+  "azucares_g": 0.0
+ },
+ "1388": {
+  "cobre_mg": 0.054,
+  "manganeso_mg": 0.013,
+  "pantotenico_mg": 0.19,
+  "azucares_g": 0.0
+ },
+ "990": {
+  "cobre_mg": 0.063,
+  "manganeso_mg": 0.011,
+  "pantotenico_mg": 0.9
+ },
+ "1371": {
+  "cobre_mg": 0.074,
+  "manganeso_mg": 0.018,
+  "pantotenico_mg": 0.621
+ },
+ "2286": {
+  "cobre_mg": 0.057,
+  "manganeso_mg": 0.018,
+  "pantotenico_mg": 0.166,
+  "azucares_g": 3.51
+ },
+ "1699": {
+  "cobre_mg": 0.057,
+  "manganeso_mg": 0.018,
+  "pantotenico_mg": 0.166,
+  "azucares_g": 3.51
+ },
+ "2259": {
+  "cobre_mg": 0.062,
+  "manganeso_mg": 0.012,
+  "pantotenico_mg": 0.781,
+  "azucares_g": 0.0
+ },
+ "447": {
+  "cobre_mg": 0.09,
+  "manganeso_mg": 0.015,
+  "pantotenico_mg": 0.846
+ },
+ "981": {
+  "manganeso_mg": 0.013,
+  "azucares_g": 0.0
+ },
+ "304": {
+  "manganeso_mg": 0.013,
+  "azucares_g": 0.0
+ },
+ "1931": {
+  "cobre_mg": 0.067,
+  "manganeso_mg": 0.01,
+  "pantotenico_mg": 0.549,
+  "azucares_g": 0.0
+ },
+ "964": {
+  "manganeso_mg": 0.032
+ },
+ "965": {
+  "azucares_g": 1.0
+ },
+ "2273": {
+  "cobre_mg": 0.079,
+  "manganeso_mg": 0.035,
+  "pantotenico_mg": 0.538,
+  "azucares_g": 0.0
+ },
+ "1814": {
+  "cobre_mg": 0.079,
+  "manganeso_mg": 0.035,
+  "pantotenico_mg": 0.538,
+  "azucares_g": 0.0
+ },
+ "1661": {
+  "cobre_mg": 0.084,
+  "manganeso_mg": 0.093,
+  "azucares_g": 0.0
+ },
+ "602": {
+  "cobre_mg": 0.182,
+  "manganeso_mg": 0.022,
+  "pantotenico_mg": 1.033
+ },
+ "2260": {
+  "cobre_mg": 0.052,
+  "manganeso_mg": 0.006,
+  "pantotenico_mg": 0.256,
+  "azucares_g": 0.0
+ },
+ "2201": {
+  "cobre_mg": 1.586,
+  "manganeso_mg": 3.414,
+  "pantotenico_mg": 0.57,
+  "azucares_g": 2.61
+ },
+ "1633": {
+  "cobre_mg": 1.725,
+  "manganeso_mg": 6.175,
+  "pantotenico_mg": 0.918,
+  "azucares_g": 4.34
+ },
+ "2207": {
+  "cobre_mg": 1.3,
+  "manganeso_mg": 1.2,
+  "pantotenico_mg": 0.52,
+  "azucares_g": 7.66
+ },
+ "922": {
+  "cobre_mg": 2.195,
+  "manganeso_mg": 1.655,
+  "pantotenico_mg": 0.864,
+  "azucares_g": 5.91
+ },
+ "534": {
+  "cobre_mg": 1.031,
+  "manganeso_mg": 2.179,
+  "pantotenico_mg": 0.471
+ },
+ "1238": {
+  "cobre_mg": 1.144,
+  "manganeso_mg": 1.934,
+  "pantotenico_mg": 1.767,
+  "azucares_g": 4.72
+ },
+ "979": {
+  "cobre_mg": 0.422,
+  "manganeso_mg": 1.665,
+  "pantotenico_mg": 1.137
+ },
+ "539": {
+  "cobre_mg": 0.422,
+  "manganeso_mg": 1.665,
+  "pantotenico_mg": 1.137
+ },
+ "2544": {
+  "cobre_mg": 0.0,
+  "manganeso_mg": 0.0,
+  "pantotenico_mg": 0.0,
+  "azucares_g": 0.0
+ },
+ "1619": {
+  "cobre_mg": 0.251,
+  "manganeso_mg": 0.02,
+  "pantotenico_mg": 0.015,
+  "azucares_g": 0.0
+ },
+ "1929": {
+  "cobre_mg": 0.019,
+  "manganeso_mg": 0.007,
+  "pantotenico_mg": 0.058,
+  "azucares_g": 3.56
+ },
+ "2554": {
+  "cobre_mg": 0.019,
+  "manganeso_mg": 0.007,
+  "pantotenico_mg": 0.058,
+  "azucares_g": 3.56
+ },
+ "1842": {
+  "cobre_mg": 0.085,
+  "manganeso_mg": 0.084,
+  "pantotenico_mg": 0.047,
+  "azucares_g": 21.27
+ },
+ "1798": {
+  "cobre_mg": 0.074,
+  "manganeso_mg": 0.422,
+  "pantotenico_mg": 0.254,
+  "azucares_g": 0.92
+ },
+ "2643": {
+  "cobre_mg": 0.036,
+  "manganeso_mg": 0.08,
+  "pantotenico_mg": 0.068,
+  "azucares_g": 82.12
+ },
+ "28": {
+  "azucares_g": 23.99
+ },
+ "1891": {
+  "cobre_mg": 3.788,
+  "manganeso_mg": 3.837,
+  "pantotenico_mg": 0.254
+ },
+ "2462": {
+  "cobre_mg": 0.004,
+  "manganeso_mg": 0.117,
+  "azucares_g": 0.96
+ },
+ "2477": {
+  "cobre_mg": 0.339,
+  "manganeso_mg": 17.466,
+  "pantotenico_mg": 0.358,
+  "azucares_g": 2.17
+ },
+ "400": {
+  "cobre_mg": 0.713,
+  "manganeso_mg": 1.59,
+  "pantotenico_mg": 2.51
+ },
+ "1374": {
+  "cobre_mg": 0.149,
+  "manganeso_mg": 0.16,
+  "pantotenico_mg": 0.4,
+  "azucares_g": 0.85
+ },
+ "1992": {
+  "cobre_mg": 1.2,
+  "manganeso_mg": 8.3,
+  "pantotenico_mg": 1.07,
+  "azucares_g": 2.76
+ },
+ "1353": {
+  "cobre_mg": 0.633,
+  "manganeso_mg": 4.99,
+  "pantotenico_mg": 0.921,
+  "azucares_g": 4.09
+ },
+ "1220": {
+  "cobre_mg": 0.328,
+  "manganeso_mg": 28.408
+ }
+}
