@@ -18,6 +18,6 @@
    navegador y sin compartir nada entre dispositivos. */
 window.NP = window.NP || {};
 NP.config = {
-  SUPABASE_URL: "",
-  SUPABASE_ANON_KEY: "",
+  SUPABASE_URL: "https://connrytkngqggyokdrub.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvbm5yeXRrbmdxZ2d5b2tkcnViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4Nzk4OTUsImV4cCI6MjEwNDQ1NTg5NX0.ykTtm0k8UxVd7TAxaI6851e2LzVfn7Z23J_vMfVRtng",
 };

@@ -111,11 +111,13 @@ NP.nube = (function () {
     const { data: { user } = {} } = await sb.auth.getUser();
     if (!user) { usuario = null; return; }
 
-    const { data: perfil, error } = await sb
+    let { data: perfil, error } = await sb
       .from("perfiles").select("*").eq("id", user.id).maybeSingle();
     if (error) throw error;
+    // Primera entrada: el perfil aún no existe (pasa cuando la cuenta tenía que
+    // confirmarse por correo, porque hasta ahora no había sesión con la que crearlo).
+    if (!perfil) perfil = await crearPerfil(user);
     if (!perfil) {
-      // Cuenta a medio crear (se registró pero no llegó a guardarse el perfil)
       await sb.auth.signOut();
       usuario = null;
       throw new Error("Tu cuenta quedó a medias. Vuelve a registrarte.");
@@ -138,6 +140,24 @@ NP.nube = (function () {
     } else {
       usuario.nutriId = usuario.id;
     }
+  }
+
+  /** Crea el perfil a partir de los datos que se guardaron al registrarse.
+      Devuelve la fila del perfil, o null si no hay forma de saber quién es. */
+  async function crearPerfil(user) {
+    const md = user.user_metadata || {};
+    if (md.rol === "nutri") {
+      const { error } = await sb.from("perfiles")
+        .insert({ id: user.id, rol: "nutri", nombre: md.nombre || user.email });
+      if (error) { console.error("[nube] crear perfil", error); return null; }
+    } else if (md.rol === "cliente" && md.codigo) {
+      const { error } = await sb.rpc("canjear_codigo", { codigo: md.codigo });
+      if (error) { console.error("[nube] canjear código", error); return null; }
+    } else {
+      return null;
+    }
+    const { data } = await sb.from("perfiles").select("*").eq("id", user.id).maybeSingle();
+    return data || null;
   }
 
   /** Descarga de una vez todo lo que este usuario puede ver */
@@ -170,13 +190,14 @@ NP.nube = (function () {
       if (!esEmail(email)) throw new Error("El email no parece válido.");
       if ((pass || "").length < 6) throw new Error("La contraseña debe tener al menos 6 caracteres.");
 
-      const { data, error } = await sb.auth.signUp({ email: limpio(email), password: pass });
+      const { data, error } = await sb.auth.signUp({
+        email: limpio(email), password: pass,
+        // Se guardan aquí para poder crear el perfil más tarde si la cuenta
+        // necesita confirmarse por correo antes de tener sesión.
+        options: { data: { rol: "nutri", nombre } },
+      });
       if (error) throw new Error(traducir(error));
-      if (!data.session) throw new Error("Cuenta creada. Confirma el email desde tu correo y luego entra.");
-
-      const { error: e2 } = await sb.from("perfiles")
-        .insert({ id: data.user.id, rol: "nutri", nombre });
-      if (e2) throw new Error("La cuenta se creó pero falló el perfil: " + traducir(e2));
+      if (!data.session) throw new Error("Cuenta creada ✓ Confirma el email desde tu correo y entra con tu contraseña.");
 
       await cargarSesion();
       return usuario;
@@ -195,12 +216,12 @@ NP.nube = (function () {
       if (ok === "NO_EXISTE") throw new Error("Ese código de acceso no existe. Pídeselo a tu nutricionista.");
       if (ok === "OCUPADO") throw new Error("Este paciente ya tiene una cuenta. Entra con su email y contraseña.");
 
-      const { data, error } = await sb.auth.signUp({ email: limpio(email), password: pass });
+      const { data, error } = await sb.auth.signUp({
+        email: limpio(email), password: pass,
+        options: { data: { rol: "cliente", codigo: cod } },
+      });
       if (error) throw new Error(traducir(error));
-      if (!data.session) throw new Error("Cuenta creada. Confirma el email desde tu correo y luego entra.");
-
-      const { error: e2 } = await sb.rpc("canjear_codigo", { codigo: cod });
-      if (e2) throw new Error(traducir(e2));
+      if (!data.session) throw new Error("Cuenta creada ✓ Confirma el email desde tu correo y entra con tu contraseña.");
 
       await cargarSesion();
       return usuario;
