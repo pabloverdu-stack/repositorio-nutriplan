@@ -6,30 +6,22 @@
   <!-- Evita que el navegador se quede con una versión antigua del HTML y cargue scripts viejos -->
   <meta http-equiv="Cache-Control" content="no-store" />
   <title>NutriPlan</title>
-  <link rel="stylesheet" href="css/styles.css?v=30" />
+  <link rel="stylesheet" href="css/styles.css?v=32" />
 </head>
 <body>
-  <div id="app">
+  <!-- Pantalla de acceso (elegir rol, entrar, crear cuenta). Se rellena desde js/views/acceso.js -->
+  <div id="auth-root" hidden></div>
+
+  <div id="app" hidden>
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-logo">◑</div>
         <span class="brand-name" data-app-name>NutriPlan</span>
       </div>
-      <nav class="nav">
-        <a href="#/pacientes" class="nav-item" data-nav="pacientes">
-          <span class="nav-ic">👥</span><span class="nav-tx">Pacientes</span>
-        </a>
-        <a href="#/recetas" class="nav-item" data-nav="recetas">
-          <span class="nav-ic">🍽️</span><span class="nav-tx">Recetas</span>
-        </a>
-        <a href="#/constructor" class="nav-item" data-nav="constructor">
-          <span class="nav-ic">🧩</span><span class="nav-tx">Constructor</span>
-        </a>
-      </nav>
-      <div class="sidebar-foot">
-        <span class="muted small">MVP · <span data-app-name>NutriPlan</span></span>
-      </div>
+      <!-- El menú y la ficha de sesión se construyen según el rol (js/app.js) -->
+      <nav class="nav"></nav>
+      <div class="sidebar-foot"></div>
     </aside>
 
     <!-- Main -->
@@ -52,18 +44,21 @@
   <div id="toast-root"></div>
 
   <!-- Orden de carga importante (scripts clásicos, namespace global NP) -->
-  <script src="js/util.js?v=30"></script>
-  <script src="js/nutrition.js?v=30"></script>
-  <script src="js/data.js?v=30"></script>
-  <script src="js/store.js?v=30"></script>
-  <script src="js/calorias.js?v=30"></script>
-  <script src="js/dri.js?v=30"></script>
-  <script src="js/pdf.js?v=30"></script>
-  <script src="js/views/pacientes.js?v=30"></script>
-  <script src="js/views/recetas.js?v=30"></script>
-  <script src="js/views/constructor.js?v=30"></script>
-  <script src="js/views/plan.js?v=30"></script>
-  <script src="js/views/mensajes.js?v=30"></script>
-  <script src="js/app.js?v=30"></script>
+  <script src="js/util.js?v=32"></script>
+  <script src="js/nutrition.js?v=32"></script>
+  <script src="js/data.js?v=32"></script>
+  <script src="js/store.js?v=32"></script>
+  <script src="js/auth.js?v=32"></script>
+  <script src="js/calorias.js?v=32"></script>
+  <script src="js/dri.js?v=32"></script>
+  <script src="js/pdf.js?v=32"></script>
+  <script src="js/views/acceso.js?v=32"></script>
+  <script src="js/views/pacientes.js?v=32"></script>
+  <script src="js/views/recetas.js?v=32"></script>
+  <script src="js/views/constructor.js?v=32"></script>
+  <script src="js/views/plan.js?v=32"></script>
+  <script src="js/views/mensajes.js?v=32"></script>
+  <script src="js/views/cliente.js?v=32"></script>
+  <script src="js/app.js?v=32"></script>
 </body>
 </html>

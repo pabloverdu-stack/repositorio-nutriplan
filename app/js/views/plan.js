@@ -899,7 +899,9 @@ NP.views.plan = function (view, planId) {
     el("button", { class: "btn", onclick: addComida }, "＋ Añadir comida"),
     el("button", { class: "btn", onclick: () => {
       if (!pac) { toast("Este plan no tiene paciente"); return; }
-      NP.pdf.exportarPlan(plan, pac);
+      // El PDF sale firmado con el nombre del nutricionista que ha entrado
+      const yo = NP.auth.actual();
+      NP.pdf.exportarPlan(plan, pac, yo && yo.rol === "nutri" ? { nutri: { nombre: yo.nombre } } : undefined);
       toast("Se abre el PDF: elige «Guardar como PDF»");
     } }, "⬇ Ver/Imprimir PDF"),
     el("button", { class: "btn btn-primary", onclick: () => {

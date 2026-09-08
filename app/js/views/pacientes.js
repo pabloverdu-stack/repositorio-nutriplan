@@ -212,6 +212,11 @@ NP.views.pacientes = (function () {
           el("div", { class: "small muted" }, resumenPersonal(p).concat([`${nPlanes} plan(es)`]).join(" · ")),
         ]),
         p.patologias ? el("span", { class: "pill", title: p.patologias }, "⚕️") : null,
+        NP.auth.cuentaDePaciente(p.id)
+          ? el("span", { class: "pill accent", title: "El paciente ya tiene su cuenta y ve sus menús" }, "🔑 con acceso")
+          : el("span", { class: "pill", title: "Todavía no ha creado su cuenta de paciente" }, "sin acceso"),
+        (function () { const n = NP.store.noLeidos(p.id, "nutri");
+          return n ? el("span", { class: "pill aviso", title: "Mensajes sin leer" }, "💬 " + n) : null; })(),
         el("span", { class: "pill accent" }, "Abrir →"),
       ]));
     });
@@ -228,7 +233,9 @@ NP.views.pacientes = (function () {
       el("button", { class: "btn btn-ghost", onclick: () => NP.app.go("#/pacientes") }, "← Pacientes"),
       el("div", { class: "grow" }),
       el("button", { class: "btn", onclick: () => formPaciente(p, () => NP.app.go("#/paciente/" + p.id)) }, "Editar"),
-      el("button", { class: "btn", onclick: () => NP.app.go("#/mensajes/" + p.id) }, "💬 Mensajes"),
+      el("button", { class: "btn", onclick: () => accesoPaciente(p) }, "🔑 Acceso del paciente"),
+      el("button", { class: "btn", onclick: () => NP.app.go("#/mensajes/" + p.id) },
+        "💬 Mensajes" + (NP.store.noLeidos(p.id, "nutri") ? " (" + NP.store.noLeidos(p.id, "nutri") + ")" : "")),
       el("button", { class: "btn btn-primary", onclick: () => crearPlan(p) }, "＋ Nuevo plan mensual"),
     ]));
 
@@ -279,6 +286,60 @@ NP.views.pacientes = (function () {
       cont.appendChild(list);
     }
     view.appendChild(cont);
+  }
+
+  /* Acceso del paciente: código con el que crea su cuenta y entra a ver sus menús */
+  function accesoPaciente(p) {
+    const cuenta = NP.auth.cuentaDePaciente(p.id);
+    const codigo = NP.store.codigoAcceso(p.id);
+    const codigoEl = el("div", { class: "codigo-acceso" }, codigo);
+    const nombreCorto = p.nombre.split(" ")[0];
+    const texto = `Hola ${nombreCorto}, ya puedes ver tus menús y escribirme desde la app.\n\n` +
+      `Entra, elige "Soy paciente" > "Es mi primera vez" y usa este código de acceso: ${codigo}`;
+
+    const estado = cuenta
+      ? el("div", { class: "nota-pdf" }, [
+          el("b", {}, "✓ Ya tiene cuenta: "), cuenta.email,
+          el("div", { class: "small muted", style: "margin-top:6px" },
+            "Entra con su email y su contraseña. El código solo hace falta para crearla."),
+        ])
+      : el("div", { class: "nota-pdf" }, [
+          el("b", {}, "Todavía no ha creado su cuenta. "),
+          "Pásale el código: en la pantalla de entrada elige «Soy paciente» y luego «Es mi primera vez».",
+        ]);
+
+    const body = el("div", {}, [
+      estado,
+      el("div", { class: "small muted", style: "margin:14px 0 6px" }, "Código de acceso de " + nombreCorto + ":"),
+      codigoEl,
+      el("div", { class: "small muted", style: "margin-top:14px;line-height:1.5" },
+        "Con su cuenta el paciente ve sus menús de la semana (solo lectura), las recetas con sus " +
+        "gramos y elaboración, y puede escribirte por el chat. No ve a tus otros pacientes."),
+    ]);
+
+    const m = modal({
+      title: "🔑 Acceso de " + nombreCorto, body,
+      footer: [
+        el("button", { class: "btn btn-ghost", onclick: () => m.close() }, "Cerrar"),
+        el("button", { class: "btn btn-danger", title: "Genera un código nuevo; el anterior deja de valer",
+          onclick: () => {
+            if (!confirm("¿Generar un código nuevo? El anterior dejará de funcionar.")) return;
+            codigoEl.textContent = NP.store.regenerarCodigo(p.id);
+            toast("Código nuevo generado");
+          } }, "↻ Nuevo código"),
+        cuenta ? el("button", { class: "btn btn-danger", onclick: () => {
+          if (!confirm("¿Quitarle el acceso? Se borra su cuenta y tendrá que crearla otra vez con un código.")) return;
+          NP.auth.borrarCuentaDePaciente(p.id);
+          m.close(); toast("Acceso retirado"); NP.app.go("#/paciente/" + p.id);
+        } }, "Quitar acceso") : null,
+        el("button", { class: "btn", onclick: () => { navigator.clipboard.writeText(texto); toast("Instrucciones copiadas"); } }, "📋 Copiar aviso"),
+        el("button", { class: "btn btn-primary", onclick: () => {
+          const tel = (p.telefono || "").replace(/[^\d+]/g, "").replace(/^\+/, "");
+          if (!tel) { toast("Este paciente no tiene teléfono. Edítalo para añadirlo."); return; }
+          window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`, "_blank");
+        } }, "🟢 Enviar por WhatsApp"),
+      ].filter(Boolean),
+    });
   }
 
   function crearPlan(p) {

@@ -34,6 +34,7 @@ NP.views.mensajes = function (view, pacienteId) {
   const pac = NP.store.getPaciente(pacienteId);
   if (!pac) { NP.app.go("#/pacientes"); return; }
   NP.app.setTitle("Mensajes · " + pac.nombre);
+  NP.store.marcarLeidos(pac.id, "nutri");
 
   const telLimpio = (pac.telefono || "").replace(/[^\d+]/g, "").replace(/^\+/, "");
   const hiloWrap = el("div", { class: "chat" });
@@ -46,13 +47,14 @@ NP.views.mensajes = function (view, pacienteId) {
       hiloWrap.appendChild(el("div", { class: "empty" }, [
         el("div", { class: "big" }, "💬"),
         el("div", {}, "Aún no hay mensajes."),
-        el("div", { class: "small muted", style: "margin-top:6px" }, "Escribe abajo y envíalo por WhatsApp o email. Se guarda aquí como historial."),
+        el("div", { class: "small muted", style: "margin-top:6px" }, "Escríbele desde abajo: «Enviar en la app» le llega dentro de su cuenta, y WhatsApp o email abren la conversación de siempre."),
       ]));
       return;
     }
     msgs.forEach((m) => {
       const fecha = new Date(m.fecha);
-      const canal = m.canal === "whatsapp" ? "WhatsApp" : (m.canal === "email" ? "Email" : "Nota");
+      const canal = m.canal === "whatsapp" ? "WhatsApp" : m.canal === "email" ? "Email"
+        : m.canal === "app" ? "En la app" : "Nota";
       hiloWrap.appendChild(el("div", { class: "msg msg-" + (m.autor === "paciente" ? "in" : "out") }, [
         el("div", { class: "msg-tx" }, m.texto),
         el("div", { class: "msg-meta" }, [
@@ -83,6 +85,14 @@ NP.views.mensajes = function (view, pacienteId) {
     if (!pac.email) { toast("Este paciente no tiene email. Edítalo para añadirlo."); return; }
     window.open(`mailto:${pac.email}?subject=${encodeURIComponent(asunto || "Tu plan nutricional")}&body=${encodeURIComponent(texto)}`, "_blank");
     registrar(texto, "email"); input.value = "";
+  }
+  /* Mensaje que le llega al paciente dentro de la app (entra con su cuenta y lo lee) */
+  function enviarEnApp(texto) {
+    if (!texto.trim()) { toast("Escribe un mensaje"); return; }
+    registrar(texto.trim(), "app");
+    input.value = "";
+    toast(NP.auth.cuentaDePaciente(pac.id) ? "Enviado ✓" : "Guardado. Lo verá en cuanto cree su cuenta.");
+    NP.app.refrescarNav();
   }
   function guardarNota(texto) {
     if (!texto.trim()) { toast("Escribe algo"); return; }
@@ -136,6 +146,11 @@ NP.views.mensajes = function (view, pacienteId) {
       footer: [
         el("button", { class: "btn btn-ghost", onclick: () => m.close() }, "Cancelar"),
         el("button", { class: "btn", onclick: () => { navigator.clipboard.writeText(prev.textContent); toast("Copiado"); } }, "📋 Copiar"),
+        el("button", { class: "btn", title: "Le aparece en su cuenta, en «Mi nutricionista»", onclick: () => {
+          const p = NP.store.getPlan(sel.value);
+          registrar(`🗓️ Ya tienes tu plan «${p.nombre}» disponible en «Mi menú».\n\n` + NP.planATexto(p, pac), "app");
+          m.close(); toast("Avisado en la app ✓"); NP.app.refrescarNav();
+        } }, "💬 Avisar en la app"),
         el("button", { class: "btn", onclick: async () => {
           const p = NP.store.getPlan(sel.value);
           m.close();
@@ -166,7 +181,10 @@ NP.views.mensajes = function (view, pacienteId) {
   ]));
   view.appendChild(el("div", { class: "panel" }, [
     contactoPills,
-    el("div", { class: "small muted" }, "El historial se guarda aquí; el mensaje se envía por WhatsApp o email."),
+    el("div", { class: "small muted" },
+      NP.auth.cuentaDePaciente(pac.id)
+        ? nombreCorto + " ya tiene cuenta: lo que envíes «en la app» le aparece al entrar. WhatsApp y email siguen disponibles."
+        : "Este paciente aún no tiene cuenta. Dale su código desde «🔑 Acceso del paciente» para que pueda ver sus menús y escribirte aquí."),
   ]));
   view.appendChild(el("div", { class: "panel", style: "margin-top:14px" }, [hiloWrap]));
   view.appendChild(el("div", { class: "panel", style: "margin-top:14px" }, [
@@ -176,7 +194,8 @@ NP.views.mensajes = function (view, pacienteId) {
       el("div", { class: "grow" }),
       el("button", { class: "btn btn-ghost", style: "flex:0 0 auto", onclick: () => guardarNota(input.value) }, "📝 Solo guardar"),
       el("button", { class: "btn", style: "flex:0 0 auto", onclick: () => enviarEmail(input.value) }, "✉️ Email"),
-      el("button", { class: "btn btn-primary", style: "flex:0 0 auto", onclick: () => enviarWhatsApp(input.value) }, "🟢 Enviar por WhatsApp"),
+      el("button", { class: "btn", style: "flex:0 0 auto", onclick: () => enviarWhatsApp(input.value) }, "🟢 WhatsApp"),
+      el("button", { class: "btn btn-primary", style: "flex:0 0 auto", title: "Le llega dentro de la app, en su apartado «Mi nutricionista»", onclick: () => enviarEnApp(input.value) }, "💬 Enviar en la app"),
     ]),
   ]));
   pintarHilo();
