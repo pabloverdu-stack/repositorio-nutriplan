@@ -131,6 +131,37 @@ NP.app = (function () {
     // y si es de otro rol el propio router redirige.
     if (!location.hash || location.hash === "#") location.hash = INICIO[u.rol];
     else route();
+    if (NP.nube && NP.nube.hayDatosLocales()) ofrecerSubida();
+  }
+
+  /* Primera entrada en la nube con pacientes guardados de antes en este
+     navegador: se ofrece subirlos para no empezar de cero. */
+  function ofrecerSubida() {
+    const n = (JSON.parse(localStorage.getItem("np_pacientes") || "[]") || []).length;
+    const m = NP.util.modal({
+      title: "Subir tus datos a la nube",
+      body: el("div", {}, [
+        el("div", {}, `Tienes ${n} paciente(s) guardados en este navegador de antes de usar la nube.`),
+        el("div", { class: "small muted", style: "margin-top:10px" },
+          "Si los subes, pasaran a tu cuenta y los veras desde cualquier dispositivo, " +
+          "con sus planes, mensajes y recetas propias. Los de este navegador no se borran."),
+      ]),
+      footer: [
+        el("button", { class: "btn btn-ghost", onclick: () => m.close() }, "Ahora no"),
+        el("button", { class: "btn btn-primary", onclick: async (ev) => {
+          ev.target.disabled = true; ev.target.textContent = "Subiendo...";
+          try {
+            const r = await NP.nube.migrar();
+            m.close();
+            NP.util.toast(`Subidos ${r.pacientes} paciente(s) y ${r.planes} plan(es)`);
+            route();
+          } catch (err) {
+            ev.target.disabled = false; ev.target.textContent = "Subir mis datos";
+            NP.util.toast("No se pudo subir: " + err.message);
+          }
+        } }, "Subir mis datos"),
+      ],
+    });
   }
 
   async function init() {
@@ -161,6 +192,15 @@ NP.app = (function () {
         el("div", { class: "small muted", style: "margin-top:6px" }, "Sirve la carpeta con un servidor (no abras el index.html directamente)."),
       ]));
       console.error(e); return;
+    }
+
+    // Modo nube: si js/config.js tiene las claves, NP.auth y NP.store pasan a
+    // hablar con Supabase. Si no, todo sigue guardandose en este navegador.
+    try {
+      if (NP.nube && NP.nube.configurado) await NP.nube.iniciar();
+    } catch (e) {
+      console.error("[nube] arranque", e);
+      NP.util.toast("No se ha podido conectar con la nube; se trabajara en local.");
     }
 
     window.addEventListener("hashchange", route);
