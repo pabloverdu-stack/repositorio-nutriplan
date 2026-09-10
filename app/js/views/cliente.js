@@ -188,6 +188,7 @@ NP.views.cliente = (function () {
         const mio = m.autor === "paciente";
         hilo.appendChild(el("div", { class: "msg msg-" + (mio ? "out" : "in") }, [
           el("div", { class: "msg-tx" }, m.texto),
+          m.adjunto ? NP.docs.tarjeta(m.adjunto) : null,
           el("div", { class: "msg-meta" }, [
             el("span", {}, (mio ? "Tú" : nombreNutri().split(" ")[0]) + " · " +
               f.toLocaleDateString("es-ES", { day: "2-digit", month: "short" }) + " " +
@@ -237,6 +238,21 @@ NP.views.cliente = (function () {
       ]),
     ]));
     pintarHilo();
+  }
+
+  /* ================= Mis documentos (PDF de la nutricionista) ================= */
+  function documentos(view) {
+    const p = pac();
+    if (!p) return;
+    NP.app.setTitle("Mis documentos");
+    view.appendChild(el("div", { class: "small muted", style: "margin-bottom:14px" },
+      "Rutinas de entrenamiento, recetas y alimentos que te ha mandado " + nombreNutri() + ". Toca uno para abrirlo."));
+    view.appendChild(NP.docs.listaAgrupada(p.id, el("div", { class: "empty" }, [
+      el("div", { class: "big" }, "📁"),
+      el("div", {}, "Todavía no tienes documentos."),
+      el("div", { class: "small muted", style: "margin-top:6px" },
+        "Cuando " + nombreNutri() + " te envíe un PDF (una rutina, recetas sugeridas...), aparecerá aquí."),
+    ])));
   }
 
   /* ================= Mi perfil ================= */
@@ -339,5 +355,5 @@ NP.views.cliente = (function () {
     }
   }
 
-  return { plan, chat, perfil };
+  return { plan, chat, documentos, perfil };
 })();

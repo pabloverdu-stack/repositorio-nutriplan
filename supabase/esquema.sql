@@ -69,6 +69,10 @@ create table if not exists public.mensajes (
   fecha       timestamptz not null default now()
 );
 
+-- PDF adjunto a un mensaje (rutinas, recetas o alimentos sugeridos):
+-- { nombre, categoria, tam, ruta }. El archivo vive en Storage.
+alter table public.mensajes add column if not exists adjunto jsonb;
+
 -- Recetas creadas por el propio nutricionista.
 create table if not exists public.recetas_propias (
   id       text primary key,
@@ -271,3 +275,27 @@ create policy "mis recetas" on public.recetas_propias
 drop policy if exists "mis favoritas" on public.favoritas;
 create policy "mis favoritas" on public.favoritas
   for all using (nutri_id = auth.uid()) with check (nutri_id = auth.uid());
+
+
+-- ---------- Documentos PDF (Storage) ----------
+-- Espacio privado. Cada PDF se guarda en «<id del paciente>/<archivo>.pdf»:
+-- la primera carpeta dice de qué paciente es, y con eso se decide quién lo ve.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('documentos', 'documentos', false, 10485760, array['application/pdf'])
+on conflict (id) do nothing;
+
+drop policy if exists "nutri gestiona documentos" on storage.objects;
+create policy "nutri gestiona documentos" on storage.objects
+  for all using (
+    bucket_id = 'documentos' and exists (
+      select 1 from public.pacientes p
+       where p.id = (storage.foldername(name))[1] and p.nutri_id = auth.uid()))
+  with check (
+    bucket_id = 'documentos' and exists (
+      select 1 from public.pacientes p
+       where p.id = (storage.foldername(name))[1] and p.nutri_id = auth.uid()));
+
+drop policy if exists "paciente lee sus documentos" on storage.objects;
+create policy "paciente lee sus documentos" on storage.objects
+  for select using (
+    bucket_id = 'documentos' and (storage.foldername(name))[1] = public.mi_paciente_id());

@@ -57,12 +57,17 @@ NP.views.mensajes = function (view, pacienteId) {
         : m.canal === "app" ? "En la app" : "Nota";
       hiloWrap.appendChild(el("div", { class: "msg msg-" + (m.autor === "paciente" ? "in" : "out") }, [
         el("div", { class: "msg-tx" }, m.texto),
+        m.adjunto ? NP.docs.tarjeta(m.adjunto) : null,
         el("div", { class: "msg-meta" }, [
           el("span", {}, fecha.toLocaleDateString("es-ES", { day: "2-digit", month: "short" }) + " " +
             fecha.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })),
           el("span", { class: "tag" }, canal),
           el("button", { class: "icon-btn", style: "width:20px;height:20px;font-size:11px", title: "Borrar",
-            onclick: () => { NP.store.deleteMensaje(m.id); pintarHilo(); } }, "✕"),
+            onclick: () => {
+              if (m.adjunto && !confirm("¿Borrar este mensaje y su PDF? El paciente dejará de verlo.")) return;
+              if (m.adjunto) NP.docs.borrar(m.adjunto);
+              NP.store.deleteMensaje(m.id); pintarHilo();
+            } }, "✕"),
         ]),
       ]));
     });
@@ -122,6 +127,8 @@ NP.views.mensajes = function (view, pacienteId) {
     el("button", { class: "btn btn-sm", style: "flex:0 0 auto", onclick: () => plantilla(`Hola ${nombreCorto}, recuerda mandarme tu peso de esta semana cuando puedas. ¡Gracias!`) }, "⚖️ Pedir peso"),
     el("button", { class: "btn btn-sm", style: "flex:0 0 auto", onclick: () => plantilla(`Hola ${nombreCorto}, te recuerdo nuestra próxima consulta. ¿Te viene bien la hora?`) }, "📅 Recordar cita"),
     el("button", { class: "btn btn-sm", style: "flex:0 0 auto", onclick: () => enviarPlan() }, "🗓️ Enviar plan semanal"),
+    el("button", { class: "btn btn-sm", style: "flex:0 0 auto", title: "Rutinas de entrenamiento, recetas o alimentos sugeridos",
+      onclick: () => NP.docs.dialogoEnviar(pac, pintarHilo) }, "📎 Enviar PDF"),
   ]);
 
   function enviarPlan() {
@@ -192,6 +199,7 @@ NP.views.mensajes = function (view, pacienteId) {
     el("div", { style: "margin-top:12px" }, [input]),
     el("div", { class: "row", style: "gap:8px;margin-top:10px;justify-content:flex-end" }, [
       el("div", { class: "grow" }),
+      el("button", { class: "btn", style: "flex:0 0 auto", onclick: () => NP.docs.dialogoEnviar(pac, pintarHilo) }, "📎 Adjuntar PDF"),
       el("button", { class: "btn btn-ghost", style: "flex:0 0 auto", onclick: () => guardarNota(input.value) }, "📝 Solo guardar"),
       el("button", { class: "btn", style: "flex:0 0 auto", onclick: () => enviarEmail(input.value) }, "✉️ Email"),
       el("button", { class: "btn", style: "flex:0 0 auto", onclick: () => enviarWhatsApp(input.value) }, "🟢 WhatsApp"),

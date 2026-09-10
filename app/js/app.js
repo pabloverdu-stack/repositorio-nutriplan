@@ -8,7 +8,7 @@ NP.app = (function () {
 
   const TITULOS = {
     pacientes: "Pacientes", recetas: "Recetas", constructor: "Constructor por ingredientes",
-    "mi-plan": "Mi menú", "mi-chat": "Mi nutricionista", "mi-perfil": "Mi perfil",
+    "mi-plan": "Mi menú", "mi-chat": "Mi nutricionista", "mi-docs": "Mis documentos", "mi-perfil": "Mi perfil",
   };
 
   // Menú lateral según quién ha entrado
@@ -22,6 +22,7 @@ NP.app = (function () {
       { key: "mi-plan", ic: "🗓️", tx: "Mi menú", hash: "#/mi-plan" },
       { key: "mi-chat", ic: "💬", tx: "Mi nutricionista", hash: "#/mi-chat",
         badge: () => { const p = NP.auth.pacienteActual(); return p ? NP.store.noLeidos(p.id, "paciente") : 0; } },
+      { key: "mi-docs", ic: "📁", tx: "Mis documentos", hash: "#/mi-docs" },
       { key: "mi-perfil", ic: "🙋", tx: "Mi perfil", hash: "#/mi-perfil" },
     ],
   };
@@ -29,7 +30,7 @@ NP.app = (function () {
   const SECCION = {
     pacientes: "pacientes", paciente: "pacientes", plan: "pacientes", mensajes: "pacientes",
     recetas: "recetas", constructor: "constructor",
-    "mi-plan": "mi-plan", "mi-chat": "mi-chat", "mi-perfil": "mi-perfil",
+    "mi-plan": "mi-plan", "mi-chat": "mi-chat", "mi-docs": "mi-docs", "mi-perfil": "mi-perfil",
   };
   const INICIO = { nutri: "#/pacientes", cliente: "#/mi-plan" };
 
@@ -86,7 +87,7 @@ NP.app = (function () {
     // Cada rol solo puede entrar en sus propias rutas
     const permitidas = u.rol === "nutri"
       ? ["pacientes", "paciente", "plan", "mensajes", "recetas", "constructor"]
-      : ["mi-plan", "mi-chat", "mi-perfil"];
+      : ["mi-plan", "mi-chat", "mi-docs", "mi-perfil"];
     if (permitidas.indexOf(base) < 0) { go(INICIO[u.rol]); return; }
 
     const v = view();
@@ -108,6 +109,7 @@ NP.app = (function () {
       // --- Paciente ---
       case "mi-plan": NP.views.cliente.plan(v); break;
       case "mi-chat": NP.views.cliente.chat(v); break;
+      case "mi-docs": NP.views.cliente.documentos(v); break;
       case "mi-perfil": NP.views.cliente.perfil(v); break;
     }
     refrescarNav();

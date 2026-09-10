@@ -527,6 +527,19 @@ label.field > span { display: block; margin-bottom: 5px; color: var(--muted); fo
 .slot.solo-lectura .slot-empty:hover { background: var(--surface); color: var(--muted-2); }
 .chat.alta { max-height: 52vh; }
 
+/* Documentos PDF adjuntos */
+.adjunto {
+  display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 9px 11px;
+  background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 10px;
+  cursor: pointer; transition: border-color .15s;
+}
+.adjunto:hover { border-color: rgba(95,208,166,.5); }
+.adjunto-ic { font-size: 22px; flex: 0 0 auto; }
+.adjunto-nm { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.docs-grupos { display: flex; flex-direction: column; gap: 14px; }
+.docs-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.docs-lista .adjunto { margin-top: 0; }
+
 /* Código de acceso del paciente */
 .codigo-acceso {
   font-family: ui-monospace, "Consolas", monospace;

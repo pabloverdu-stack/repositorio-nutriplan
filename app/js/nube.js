@@ -18,6 +18,7 @@ NP.nube = (function () {
   let activo = false;
   let usuario = null;      // { id, rol, nombre, email, pacienteId, nutriId }
   let nutriNombre = "";    // nombre del nutricionista (lo necesita el paciente)
+  let recuperando = false; // se ha entrado con el enlace de recuperar contraseña
 
   // Copia en memoria de lo que este usuario puede ver
   const C = { pacientes: [], planes: [], mensajes: [], propias: [], favoritas: [] };
@@ -43,6 +44,8 @@ NP.nube = (function () {
     if (/already registered|already been registered/i.test(m)) return "Ya existe una cuenta con ese email.";
     if (/Invalid login credentials/i.test(m)) return "Email o contraseña incorrectos.";
     if (/Email not confirmed/i.test(m)) return "Tienes que confirmar tu email antes de entrar. Mira tu correo.";
+    if (/rate limit|security purposes/i.test(m)) return "Has pedido demasiados correos seguidos. Espera un minuto y vuelve a intentarlo.";
+    if (/different from the old/i.test(m)) return "La contraseña nueva tiene que ser distinta de la anterior.";
     if (/Password should be at least/i.test(m)) return "La contraseña debe tener al menos 6 caracteres.";
     if (/CODIGO_INVALIDO/.test(m)) return "Ese código de acceso no existe. Pídeselo a tu nutricionista.";
     if (/YA_TIENE_CUENTA/.test(m)) return "Este paciente ya tiene una cuenta. Entra con su email y contraseña.";
@@ -74,10 +77,13 @@ NP.nube = (function () {
   const msgApp = (f) => ({
     id: f.id, pacienteId: f.paciente_id, autor: f.autor, texto: f.texto,
     canal: f.canal, leido: !!f.leido, fecha: new Date(f.fecha).getTime(),
+    adjunto: f.adjunto || null,
   });
   const msgFila = (m) => ({
     id: m.id, paciente_id: m.pacienteId, autor: m.autor, texto: m.texto,
     canal: m.canal || "app", leido: !!m.leido, fecha: new Date(m.fecha).toISOString(),
+    // Los PDF de antes de la nube iban dentro del mensaje (base64); ahí no caben
+    adjunto: m.adjunto && m.adjunto.ruta ? m.adjunto : null,
   });
 
   const propiaApp = (f) => Object.assign({}, f.datos, { id: f.id, propia: true });
@@ -94,12 +100,22 @@ NP.nube = (function () {
       console.warn("[nube] No se ha podido cargar la librería de Supabase; se sigue en modo local.");
       return false;
     }
+    // ¿Se llega desde el enlace de «recuperar contraseña» del correo? Hay que
+    // mirarlo antes de crear el cliente, porque Supabase limpia la URL al leerla.
+    const hash = location.hash || "";
+    recuperando = /type=recovery/.test(hash);
+    if (/error_code=/.test(hash)) {
+      setTimeout(() => NP.util.toast("El enlace del correo no es válido o ha caducado. Pide otro."), 300);
+      history.replaceState(null, "", location.pathname + location.search);
+    }
     sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
     activo = true;
     instalar();
     try {
       const { data } = await sb.auth.getSession();
-      if (data && data.session) await cargarSesion();
+      // En recuperación hay sesión, pero no se entra hasta poner la nueva contraseña
+      if (data && data.session && !recuperando) await cargarSesion();
+      if (recuperando && !(data && data.session)) recuperando = false;
     } catch (e) {
       console.error("[nube] sesión", e);
     }
@@ -259,6 +275,28 @@ NP.nube = (function () {
       if (e1) throw new Error("La contraseña actual no es correcta.");
       const { error: e2 } = await sb.auth.updateUser({ password: nueva });
       if (e2) throw new Error(traducir(e2));
+      return usuario;
+    },
+
+    /** Envía un correo con un enlace para poner una contraseña nueva */
+    async recuperarPass(email) {
+      if (!esEmail(email)) throw new Error("El email no parece válido.");
+      const { error } = await sb.auth.resetPasswordForEmail(limpio(email), {
+        redirectTo: location.origin + location.pathname,
+      });
+      if (error) throw new Error(traducir(error));
+    },
+    enRecuperacion: () => recuperando,
+    cancelarRecuperacion() { recuperando = false; authNube.salir(); },
+
+    /** Tras abrir el enlace del correo: guarda la contraseña nueva y entra */
+    async nuevaPass(nueva) {
+      if ((nueva || "").length < 6) throw new Error("La contraseña debe tener al menos 6 caracteres.");
+      const { error } = await sb.auth.updateUser({ password: nueva });
+      if (error) throw new Error(traducir(error));
+      recuperando = false;
+      await cargarSesion();
+      if (!usuario) throw new Error("No se ha podido cargar tu cuenta.");
       return usuario;
     },
 
@@ -470,8 +508,24 @@ NP.nube = (function () {
     return { pacientes: pacientes.length, planes: filasPlan.length, mensajes: filasMsg.length };
   }
 
+  /* ---------- Archivos (PDF que se mandan a los pacientes) ---------- */
+  const BUCKET = "documentos";
+  async function subirArchivo(ruta, file) {
+    const { error } = await sb.storage.from(BUCKET)
+      .upload(ruta, file, { contentType: "application/pdf", upsert: false });
+    if (error) throw new Error(/bucket not found/i.test(error.message)
+      ? "Falta crear el espacio «documentos» en Supabase (vuelve a ejecutar supabase/esquema.sql)."
+      : traducir(error));
+  }
+  async function urlArchivo(ruta) {
+    const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(ruta, 60 * 10);
+    if (error) throw new Error(traducir(error));
+    return data.signedUrl;
+  }
+  function borrarArchivo(ruta) { enviar(sb.storage.from(BUCKET).remove([ruta]), "el borrado del PDF"); }
+
   return {
-    iniciar, migrar, hayDatosLocales,
+    iniciar, migrar, hayDatosLocales, subirArchivo, urlArchivo, borrarArchivo,
     get activo() { return activo; },
     get configurado() { return configurado; },
   };
