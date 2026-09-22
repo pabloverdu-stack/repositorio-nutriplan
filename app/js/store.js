@@ -2,7 +2,8 @@
    Cada paciente pertenece a un nutricionista (nutriId): un nutricionista solo ve
    los suyos, y un paciente que entra como cliente solo ve su propia ficha. */
 NP.store = (function () {
-  const K = { pac: "np_pacientes", plan: "np_planes", prop: "np_propias", msg: "np_mensajes", fav: "np_favoritas" };
+  const K = { pac: "np_pacientes", plan: "np_planes", prop: "np_propias", msg: "np_mensajes", fav: "np_favoritas",
+    doc: "np_documentos", reg: "np_registros" };
   const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; } };
   const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
@@ -48,6 +49,8 @@ NP.store = (function () {
     write(K.pac, allPacientes().filter((p) => p.id !== id));
     write(K.plan, allPlanes().filter((pl) => pl.pacienteId !== id));
     write(K.msg, getMensajes().filter((m) => m.pacienteId !== id));
+    quitarDocumentos((d) => d.pacienteId === id);
+    quitarRegistros((r) => r.pacienteId === id);
     if (NP.auth) NP.auth.borrarCuentaDePaciente(id);
   }
 
@@ -159,7 +162,137 @@ NP.store = (function () {
   /** Total sin leer del nutricionista, sumando todos sus pacientes (aviso del menú) */
   const noLeidosNutri = () => getPacientes().reduce((s, p) => s + noLeidos(p.id, "nutri"), 0);
 
+  // ---- Documentos (PDF que el nutricionista manda al paciente) ----
+  // La ficha de cada envío va en localStorage; el PDF en sí va en IndexedDB,
+  // porque localStorage se queda en unos 5 MB y un par de rutinas ya lo llenarían.
+  const archivos = (function () {
+    let conexion = null;
+    const db = () => conexion || (conexion = new Promise((ok, ko) => {
+      const r = indexedDB.open("nutriplan", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("archivos");
+      r.onsuccess = () => ok(r.result);
+      r.onerror = () => ko(r.error);
+    }));
+    const op = (modo, fn) => db().then((d) => new Promise((ok, ko) => {
+      const t = d.transaction("archivos", modo);
+      const req = fn(t.objectStore("archivos"));
+      t.oncomplete = () => ok(req.result);
+      t.onerror = () => ko(t.error);
+    }));
+    return {
+      put: (k, blob) => op("readwrite", (s) => s.put(blob, k)),
+      get: (k) => op("readonly", (s) => s.get(k)),
+      del: (k) => op("readwrite", (s) => s.delete(k)),
+    };
+  })();
+
+  const allDocs = () => read(K.doc, []);
+  const getDocumentos = () => {
+    const ids = new Set(getPacientes().map((p) => p.id));
+    return allDocs().filter((d) => ids.has(d.pacienteId));
+  };
+  const documentosDe = (pacienteId) =>
+    getDocumentos().filter((d) => d.pacienteId === pacienteId).sort((a, b) => b.fecha - a.fecha);
+  const docsNuevos = (pacienteId) => documentosDe(pacienteId).filter((d) => !d.visto).length;
+  const docsListos = () => true;
+
+  /** Guarda el PDF una sola vez y crea una ficha por cada paciente que lo recibe */
+  async function subirDocumento(file, meta, pacienteIds) {
+    const ruta = NP.util.uid() + ".pdf";
+    await archivos.put(ruta, file);
+    const a = ambito();
+    const fecha = Date.now();
+    const nuevos = pacienteIds.map((pid) => ({
+      id: NP.util.uid(), pacienteId: pid, nutriId: a.tipo === "nutri" ? a.id : null,
+      titulo: meta.titulo, categoria: meta.categoria, nota: meta.nota || "",
+      ruta, archivo: file.name, tamano: file.size, visto: false, fecha,
+    }));
+    write(K.doc, allDocs().concat(nuevos));
+    return nuevos;
+  }
+  /** Manda a más pacientes un PDF ya subido (sin volver a guardar el archivo) */
+  async function compartirDocumento(docId, pacienteIds) {
+    const base = allDocs().find((d) => d.id === docId);
+    if (!base) throw new Error("ese documento ya no existe");
+    const fecha = Date.now();
+    const nuevos = pacienteIds.map((pid) =>
+      Object.assign({}, base, { id: NP.util.uid(), pacienteId: pid, visto: false, fecha }));
+    write(K.doc, allDocs().concat(nuevos));
+    return nuevos;
+  }
+  async function urlDocumento(doc) {
+    const blob = await archivos.get(doc.ruta);
+    if (!blob) throw new Error("el archivo ya no está en este navegador");
+    const url = URL.createObjectURL(blob);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return url;
+  }
+  /** Quita fichas de documento y borra los PDF a los que ya no apunta ninguna */
+  function quitarDocumentos(fn) {
+    const list = allDocs();
+    const fuera = list.filter(fn);
+    if (!fuera.length) return;
+    const resto = list.filter((d) => !fn(d));
+    write(K.doc, resto);
+    new Set(fuera.map((d) => d.ruta)).forEach((ruta) => {
+      if (!resto.some((d) => d.ruta === ruta)) archivos.del(ruta).catch(() => {});
+    });
+  }
+  const deleteDocumento = (id) => quitarDocumentos((d) => d.id === id);
+  function marcarDocumentoVisto(id) {
+    const list = allDocs();
+    const d = list.find((x) => x.id === id);
+    if (d && !d.visto) { d.visto = true; write(K.doc, list); }
+  }
+
+  // ---- Registros del paciente (revisiones, fotos, rutinas, actividad, citas, alternativas) ----
+  // Todos comparten forma: { id, pacienteId, tipo, fecha, creado, ...lo propio del tipo }.
+  // Van juntos porque se guardan y se consultan igual; cada vista usa su tipo.
+  const allRegistros = () => read(K.reg, []);
+  const getRegistros = () => {
+    const ids = new Set(getPacientes().map((p) => p.id));
+    return allRegistros().filter((r) => ids.has(r.pacienteId));
+  };
+  /** Los de un paciente y tipo, del más antiguo al más reciente */
+  const registrosDe = (pacienteId, tipo) => getRegistros()
+    .filter((r) => r.pacienteId === pacienteId && (!tipo || r.tipo === tipo))
+    .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)) || a.creado - b.creado);
+  const getRegistro = (id) => getRegistros().find((r) => r.id === id) || null;
+
+  function saveRegistro(r) {
+    const list = allRegistros();
+    if (!r.id) { r.id = NP.util.uid(); r.creado = r.creado || Date.now(); list.push(r); }
+    else { const i = list.findIndex((x) => x.id === r.id); i >= 0 ? (list[i] = r) : list.push(r); }
+    write(K.reg, list); return r;
+  }
+  /** Quita registros y borra los archivos (fotos) a los que ya no apunta ninguno */
+  function quitarRegistros(fn) {
+    const list = allRegistros();
+    const fuera = list.filter(fn);
+    if (!fuera.length) return;
+    const resto = list.filter((r) => !fn(r));
+    write(K.reg, resto);
+    fuera.filter((r) => r.ruta).forEach((r) => {
+      if (!resto.some((x) => x.ruta === r.ruta)) archivos.del(r.ruta).catch(() => {});
+    });
+  }
+  const deleteRegistro = (id) => quitarRegistros((r) => r.id === id);
+
+  /** Guarda la imagen en este navegador y crea su ficha de foto */
+  async function subirFoto(file, meta) {
+    const ruta = NP.util.uid() + "." + (/\.(\w+)$/.exec(file.name) || [, "jpg"])[1].toLowerCase();
+    await archivos.put(ruta, file);
+    return saveRegistro(Object.assign({ tipo: "foto", ruta, archivo: file.name, tamano: file.size }, meta));
+  }
+  async function urlFoto(reg) {
+    const blob = await archivos.get(reg.ruta);
+    if (!blob) throw new Error("la foto ya no está en este navegador");
+    return URL.createObjectURL(blob); // la libera quien la pinta, al cambiar de vista
+  }
+
   return {
+    registrosListos: () => true,
+    getRegistros, registrosDe, getRegistro, saveRegistro, deleteRegistro, subirFoto, urlFoto,
     getPacientes, getPaciente, getPacienteGlobal, savePaciente, savePacienteGlobal, deletePaciente,
     adoptarHuerfanos, codigoAcceso, regenerarCodigo, pacientePorCodigo,
     getPlanes, getPlan, planesDe, savePlan, deletePlan,
@@ -167,5 +300,7 @@ NP.store = (function () {
     getFavoritas, esFavorita, toggleFavorita,
     getMensajes, mensajesDe, saveMensaje, deleteMensaje, ultimoMensaje,
     noLeidos, marcarLeidos, noLeidosNutri,
+    getDocumentos, documentosDe, docsNuevos, docsListos, subirDocumento, compartirDocumento,
+    urlDocumento, deleteDocumento, marcarDocumentoVisto,
   };
 })();

@@ -2,8 +2,10 @@
    Hilo de mensajes guardado en la app + envío en 1 clic por WhatsApp / email. */
 NP.views = NP.views || {};
 
-/* Genera un resumen en texto del plan semanal (para enviarlo al paciente) */
+/* Genera un resumen en texto del plan (para enviarlo al paciente) */
 NP.planATexto = function (plan, pac) {
+  // El menú por opciones tiene otra forma: lo resume su propio módulo
+  if (NP.esMenu(plan)) return NP.menuATexto(plan, pac);
   const comidas = Array.isArray(plan.comidas) ? plan.comidas : NP.COMIDAS;
   const L = [];
   L.push(`*${plan.nombre}*${pac ? " · " + pac.nombre : ""}`);

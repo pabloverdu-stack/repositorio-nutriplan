@@ -13,6 +13,107 @@ NP.views.cliente = (function () {
   };
   const claveHoy = () => NP.DIAS[(new Date().getDay() + 6) % 7].key; // getDay(): 0 = domingo
 
+  /* ================= Diario de hoy: agua y comidas hechas ================= */
+  /* Un registro «diario» por paciente y día con lo que bebe (cada toma por separado,
+     para poder quitar una) y las comidas que ha marcado como hechas. */
+  const AGUA_OBJETIVO = 2000; // ml
+  const TOMAS = [
+    { ml: 330, ic: "🥛", tx: "Vaso 33 cl" },
+    { ml: 500, ic: "🥤", tx: "Vaso 50 cl" },
+    { ml: 1000, ic: "🍶", tx: "Botella 1 L" },
+  ];
+  const fechaHoy = () => { // en hora local, no UTC: a las 00:30 ya es el día siguiente
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  };
+  const litros = (ml) => fmt(ml / 1000, ml % 1000 ? (ml % 100 ? 2 : 1) : 0) + " L";
+
+  function diarioHoy(p) {
+    const f = fechaHoy();
+    return NP.store.registrosDe(p.id, "diario").find((r) => r.fecha === f)
+      || { tipo: "diario", pacienteId: p.id, fecha: f, agua: [], comidas: {} };
+  }
+  function cambiarDiario(p, fn) {
+    const r = diarioHoy(p);
+    r.agua = r.agua || []; r.comidas = r.comidas || {};
+    fn(r);
+    NP.store.saveRegistro(r);
+    return r;
+  }
+  const aguaTotal = (r) => (r.agua || []).reduce((s, t) => s + (Number(t.ml) || 0), 0);
+
+  /** Panel del agua: botones para sumar un vaso o una botella, o escribir los ml a mano */
+  function panelAgua(p, resumenComidas) {
+    const caja = el("div", { class: "panel agua" });
+    function pintar() {
+      const r = diarioHoy(p);
+      const total = aguaTotal(r);
+      const pct = Math.min(100, Math.round((total / AGUA_OBJETIVO) * 100));
+      const fMl = el("input", { type: "number", min: 1, max: 5000, step: 10, placeholder: "ml", inputmode: "numeric" });
+      const aMano = () => {
+        const ml = Math.round(Number(fMl.value));
+        if (!ml || ml <= 0 || ml > 5000) { toast("Escribe los ml que has bebido (por ejemplo 250)"); return; }
+        sumar(ml);
+      };
+      fMl.addEventListener("keydown", (e) => { if (e.key === "Enter") aMano(); });
+      const comidas = resumenComidas ? resumenComidas() : null;
+
+      caja.innerHTML = "";
+      [
+        el("div", { class: "row", style: "align-items:center;gap:10px" }, [
+          el("div", { class: "grow" }, [
+            el("div", { class: "side-ttl", style: "margin:0" }, "💧 Agua de hoy"),
+            el("div", { class: "small muted" }, total >= AGUA_OBJETIVO
+              ? "¡Objetivo cumplido! 🎉"
+              : "Te quedan " + litros(AGUA_OBJETIVO - total) + " para llegar a " + litros(AGUA_OBJETIVO)),
+          ]),
+          comidas && comidas.total ? el("span", { class: "pill" + (comidas.hechas === comidas.total ? " accent" : ""), style: "flex:0 0 auto" },
+            "🍽️ " + comidas.hechas + "/" + comidas.total + " comidas") : null,
+          el("div", { class: "agua-total" }, litros(total)),
+        ]),
+        el("div", { class: "agua-barra" }, [el("div", { style: "width:" + pct + "%" })]),
+        el("div", { class: "agua-botones" }, TOMAS.map((t) =>
+          el("button", { class: "btn agua-btn", onclick: () => sumar(t.ml, t.ic) }, [
+            el("span", { class: "agua-ic" }, t.ic), el("span", {}, "＋ " + t.tx),
+          ])).concat([
+          el("div", { class: "agua-mano" }, [fMl, el("button", { class: "btn btn-sm", onclick: aMano }, "＋ Añadir")]),
+        ])),
+        (r.agua || []).length ? el("div", { class: "agua-tomas" }, [el("span", { class: "small muted" }, "Hoy:")].concat(
+          r.agua.map((t, i) => el("button", { class: "agua-toma", title: "Quitar esta toma", onclick: () => quitar(i) },
+            (t.ic || "💧") + " " + (t.ml >= 1000 ? litros(t.ml) : t.ml + " ml") + (t.hora ? " · " + t.hora : "") + " ✕")))) : null,
+      ].filter(Boolean).forEach((n) => caja.appendChild(n));
+    }
+    function sumar(ml, ic) {
+      const hora = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+      cambiarDiario(p, (r) => r.agua.push({ ml, ic: ic || "💧", hora }));
+      pintar();
+    }
+    function quitar(i) {
+      cambiarDiario(p, (r) => r.agua.splice(i, 1));
+      pintar();
+    }
+    pintar();
+    return { nodo: caja, refrescar: pintar };
+  }
+
+  /** Botón para marcar una comida de hoy como hecha */
+  function tickComida(p, clave, onCambio) {
+    const hecha = !!diarioHoy(p).comidas?.[clave];
+    return el("button", {
+      class: "tick-comida" + (hecha ? " hecha" : ""),
+      title: hecha ? "Marcada como hecha · pulsa para desmarcarla" : "Márcala cuando la hayas hecho",
+      onclick: (e) => {
+        e.stopPropagation();
+        const r = cambiarDiario(p, (x) => { if (x.comidas[clave]) delete x.comidas[clave]; else x.comidas[clave] = true; });
+        const ya = !!r.comidas[clave];
+        e.currentTarget.classList.toggle("hecha", ya);
+        e.currentTarget.textContent = ya ? "✓ Hecha" : "○ Hecha";
+        e.currentTarget.closest(".comida-bloque")?.classList.toggle("comida-hecha", ya);
+        onCambio && onCambio();
+      },
+    }, hecha ? "✓ Hecha" : "○ Hecha");
+  }
+
   /* ================= Mi menú ================= */
   function plan(view) {
     const p = pac();
@@ -50,14 +151,20 @@ NP.views.cliente = (function () {
     }
 
     const cuerpo = el("div", {});
-    view.appendChild(el("div", { class: "plan-head" }, [
-      planes.length > 1 ? el("label", { class: "field", style: "margin:0;flex:0 0 auto;min-width:220px" },
-        [el("span", {}, "Mi plan"), selPlan]) : el("div", { class: "side-ttl" }, actual.nombre),
-      el("div", { class: "grow" }),
-      seg,
-      el("button", { class: "btn", style: "flex:0 0 auto", onclick: () => descargar() }, "📄 Descargar / imprimir"),
-    ]));
+    const cabecera = el("div", { class: "plan-head" });
+    view.appendChild(cabecera);
     view.appendChild(cuerpo);
+    function pintarCabecera() {
+      cabecera.innerHTML = "";
+      [
+        planes.length > 1 ? el("label", { class: "field", style: "margin:0;flex:0 0 auto;min-width:220px" },
+          [el("span", {}, "Mi plan"), selPlan]) : el("div", { class: "side-ttl" }, actual.nombre),
+        el("div", { class: "grow" }),
+        // La rejilla se ve por días; el menú por opciones no tiene "hoy"
+        NP.esMenu(actual) ? null : seg,
+        el("button", { class: "btn", style: "flex:0 0 auto", onclick: () => descargar() }, "📄 Descargar / imprimir"),
+      ].filter(Boolean).forEach((n) => cabecera.appendChild(n));
+    }
 
     function descargar() {
       const u = p.nutriId ? NP.auth.getUsuario(p.nutriId) : null;
@@ -68,19 +175,40 @@ NP.views.cliente = (function () {
     const slotDe = (pl, dKey, cKey) => (pl.dias[dKey] && pl.dias[dKey][cKey]) || null;
     const kcalDia = (pl, dKey) => comidasDe(pl).reduce((s, c) => s + NP.slot.kcal(slotDe(pl, dKey, c.key), c.tipo), 0);
 
+    // Comidas de hoy que ha marcado como hechas, para el contador del panel del agua
+    const clavesHoy = () => NP.esMenu(actual)
+      ? [...new Set((actual.bloques || []).flatMap((b) => (b.comidas || []).map((c) => c.nombre)))]
+      : comidasDe(actual).filter((c) => NP.slot.comidas(slotDe(actual, claveHoy(), c.key), c.tipo).length).map((c) => c.key);
+    const resumenComidas = () => {
+      const hechas = diarioHoy(p).comidas || {};
+      const claves = clavesHoy();
+      // En el menú por opciones cada bloque trae sus comidas: cuenta las del bloque más largo
+      const total = NP.esMenu(actual)
+        ? Math.max(0, ...(actual.bloques || []).map((b) => (b.comidas || []).length))
+        : claves.length;
+      return { total, hechas: Math.min(total, claves.filter((k) => hechas[k]).length) };
+    };
+
     function pintar() {
+      pintarCabecera();
       cuerpo.innerHTML = "";
-      cuerpo.appendChild(vista === "hoy" ? vistaHoy() : vistaSemana());
+      const agua = panelAgua(p, resumenComidas);
+      cuerpo.appendChild(agua.nodo);
+      if (NP.esMenu(actual)) {
+        NP.views.menu.vista(cuerpo, actual, { tick: (c) => tickComida(p, c.nombre, agua.refrescar) });
+        return;
+      }
+      cuerpo.appendChild(vista === "hoy" ? vistaHoy(agua.refrescar) : vistaSemana());
     }
 
     /* --- Hoy: las comidas del día, grandes y claras --- */
-    function vistaHoy() {
+    function vistaHoy(onTick) {
       const hoy = claveHoy();
       const wrap = el("div", {});
       const kcal = kcalDia(actual, hoy);
       const obj = p.kcal_objetivo || 0;
 
-      wrap.appendChild(el("div", { class: "panel" }, [
+      wrap.appendChild(el("div", { class: "panel", style: "margin-top:14px" }, [
         el("div", { class: "row", style: "align-items:center" }, [
           el("div", {}, [
             el("div", { class: "side-ttl", style: "margin:0" }, NP.DIA_LARGO[hoy]),
@@ -96,13 +224,15 @@ NP.views.cliente = (function () {
       const lista = el("div", { style: "margin-top:14px;display:flex;flex-direction:column;gap:12px" });
       comidasDe(actual).forEach((c) => {
         const cms = NP.slot.comidas(slotDe(actual, hoy, c.key), c.tipo);
-        lista.appendChild(el("div", { class: "panel comida-bloque" }, [
+        const hecha = cms.length && !!(diarioHoy(p).comidas || {})[c.key];
+        lista.appendChild(el("div", { class: "panel comida-bloque" + (hecha ? " comida-hecha" : "") }, [
           el("div", { class: "comida-cab" }, [
             el("span", { class: "comida-ic" }, NP.comp.EMO[c.tipo] || "🍴"),
             el("span", { class: "comida-lb" }, c.label),
             el("span", { class: "grow" }),
             cms.length ? el("span", { class: "kcal" },
               fmt(cms.reduce((s, cm) => s + (cm.nutricion.energia_kcal || 0), 0)) + " kcal") : null,
+            cms.length ? tickComida(p, c.key, onTick) : null,
           ]),
           cms.length
             ? el("div", { class: "platos" }, cms.map((cm) => platoCard(cm)))
@@ -255,10 +385,11 @@ NP.views.cliente = (function () {
           el("div", { class: "name" }, p.nombre),
           el("div", { class: "small muted" }, u.email),
         ]),
-        el("button", { class: "btn btn-sm", style: "flex:0 0 auto", onclick: () => registrarPeso() }, "⚖️ Actualizar mi peso"),
+        el("button", { class: "btn btn-sm", style: "flex:0 0 auto",
+          onclick: () => NP.views.revisiones.formPesoPaciente(p, () => NP.app.route()) }, "⚖️ Actualizar mi peso"),
       ]),
       el("div", { class: "kpis" }, [
-        kpi("Objetivo", p.objetivo || "—"),
+        el("div", { class: "kpi" }, [el("div", { class: "v v-texto" }, p.objetivo || "—"), el("div", { class: "l" }, "Objetivo")]),
         kpi("Kcal/día", fmt(p.kcal_objetivo)),
         p.peso_kg != null ? kpi("Peso", fmt(p.peso_kg, 1) + " kg") : null,
         p.altura_cm != null ? kpi("Altura", fmt(p.altura_cm, 0) + " cm") : null,
@@ -277,39 +408,6 @@ NP.views.cliente = (function () {
         el("button", { class: "btn btn-danger", style: "flex:0 0 auto", onclick: () => NP.app.cerrarSesion() }, "Cerrar sesión"),
       ]),
     ]));
-
-    function registrarPeso() {
-      const f = el("input", { type: "number", step: 0.1, min: 20, max: 350, value: p.peso_kg ?? "", placeholder: "kg" });
-      const avisar = el("input", { type: "checkbox", checked: true });
-      const m = modal({
-        title: "Actualizar mi peso",
-        body: el("div", {}, [
-          el("label", { class: "field" }, [el("span", {}, "Peso de hoy (kg)"), f]),
-          el("label", { class: "row", style: "gap:8px;align-items:center" }, [
-            el("span", { style: "flex:0 0 auto" }, [avisar]),
-            el("span", { class: "small muted" }, "Avisar a mi nutricionista por el chat"),
-          ]),
-        ]),
-        footer: [
-          el("button", { class: "btn btn-ghost", onclick: () => m.close() }, "Cancelar"),
-          el("button", { class: "btn btn-primary", onclick: () => {
-            const v = Number(f.value);
-            if (!v || v < 20 || v > 350) { toast("Escribe un peso válido"); return; }
-            const anterior = p.peso_kg;
-            p.peso_kg = v;
-            NP.store.savePacienteGlobal(p);
-            if (avisar.checked) {
-              NP.store.saveMensaje({
-                pacienteId: p.id, autor: "paciente", canal: "app",
-                texto: `⚖️ Peso actualizado: ${fmt(v, 1)} kg` +
-                  (anterior != null ? ` (antes ${fmt(anterior, 1)} kg)` : ""),
-              });
-            }
-            m.close(); toast("Peso guardado"); NP.app.route();
-          } }, "Guardar"),
-        ],
-      });
-    }
 
     function cambiarPass() {
       const f1 = el("input", { type: "password", placeholder: "Contraseña actual" });

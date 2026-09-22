@@ -337,7 +337,9 @@ label.field > span { display: block; margin-bottom: 5px; color: var(--muted); fo
 /* KPI */
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 12px; margin-bottom: 6px; }
 .kpi { background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 12px; padding: 12px 14px; }
-.kpi .v { font-size: 22px; font-weight: 750; }
+.kpi { min-width: 0; }
+.kpi .v { font-size: 22px; font-weight: 750; overflow-wrap: anywhere; }
+.kpi .v.v-texto { font-size: 16px; line-height: 1.25; padding: 3px 0; }
 .kpi .l { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
 
 /* Toast */
@@ -511,6 +513,31 @@ label.field > span { display: block; margin-bottom: 5px; color: var(--muted); fo
 .comida-bloque { padding: 14px 16px; }
 .comida-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .comida-cab .grow { flex: 1; }
+
+/* Diario del paciente: agua de hoy y comidas hechas */
+.agua { margin-bottom: 14px; }
+.agua-total { flex: 0 0 auto; font-size: 24px; font-weight: 750; color: #6cb8ff; }
+.agua-barra { height: 10px; border-radius: 99px; background: var(--surface-3); overflow: hidden; margin: 10px 0 12px; }
+.agua-barra > div { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #4ea4f0, #6cd0ff); transition: width .3s; }
+.agua-botones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.agua-btn { display: inline-flex; align-items: center; gap: 6px; }
+.agua-ic { font-size: 18px; }
+.agua-mano { display: inline-flex; gap: 6px; align-items: center; }
+.agua-mano input { width: 90px; }
+.agua-tomas { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+.agua-toma {
+  font: inherit; font-size: 12px; cursor: pointer; color: var(--text);
+  background: rgba(108,184,255,.1); border: 1px solid rgba(108,184,255,.3); border-radius: 99px; padding: 3px 9px;
+}
+.agua-toma:hover { border-color: #e07a7a; }
+.tick-comida {
+  flex: 0 0 auto; font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; color: var(--muted);
+  background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 99px; padding: 5px 12px; transition: .15s;
+}
+.tick-comida:hover { border-color: var(--accent); color: var(--text); }
+.tick-comida.hecha { color: var(--accent-ink, #0b1a14); background: var(--accent); border-color: var(--accent); }
+.comida-hecha { border-color: rgba(95,208,166,.45); }
+.comida-hecha .comida-lb { text-decoration: line-through; text-decoration-color: rgba(95,208,166,.7); }
 .comida-ic { font-size: 18px; }
 .comida-lb { font-weight: 650; font-size: 14px; }
 .platos { display: flex; flex-direction: column; gap: 8px; }
@@ -526,6 +553,262 @@ label.field > span { display: block; margin-bottom: 5px; color: var(--muted); fo
 .slot.solo-lectura .slot-empty { cursor: default; }
 .slot.solo-lectura .slot-empty:hover { background: var(--surface); color: var(--muted-2); }
 .chat.alta { max-height: 52vh; }
+
+/* ===== Documentos: PDF del nutricionista al paciente ===== */
+.doc-sec { display: flex; align-items: center; gap: 9px; font-weight: 680; font-size: 15px; margin: 24px 0 10px; }
+.doc-sec:first-child { margin-top: 4px; }
+.doc-sec-ic { font-size: 19px; }
+.doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.doc-card {
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius);
+  padding: 14px; transition: .15s;
+}
+.doc-card:hover { border-color: var(--line); }
+.doc-card.es-nuevo { border-color: rgba(95,208,166,.45); }
+.doc-top { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+.doc-top .grow { flex: 1; min-width: 0; }
+.doc-ic {
+  width: 42px; height: 42px; flex: 0 0 42px; border-radius: 11px;
+  display: grid; place-items: center; font-size: 21px; background: var(--surface-3);
+}
+.doc-tit { font-weight: 640; font-size: 14px; line-height: 1.3; margin-bottom: 3px; overflow-wrap: anywhere; }
+.doc-nuevo {
+  flex: 0 0 auto; font-size: 10.5px; font-weight: 750; text-transform: uppercase; letter-spacing: .04em;
+  padding: 3px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-ink);
+}
+.doc-nota {
+  font-size: 12.5px; color: var(--muted); line-height: 1.45; white-space: pre-wrap;
+  background: var(--surface-2); border-radius: 9px; padding: 8px 10px;
+}
+.doc-nota-1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.doc-acc { display: flex; gap: 8px; margin-top: auto; }
+.doc-acc .btn { flex: 1; justify-content: center; }
+.seg-docs { flex-wrap: wrap; }
+/* Zona para elegir o soltar el PDF */
+.doc-drop {
+  display: block; text-align: center; cursor: pointer; color: var(--muted);
+  border: 1.5px dashed var(--line); border-radius: 12px; padding: 20px 14px; margin-bottom: 14px;
+  background: var(--surface-2); transition: .15s;
+}
+.doc-drop:hover, .doc-drop.encima { border-color: var(--accent); color: var(--text); background: rgba(95,208,166,.06); }
+.doc-drop.lleno { border-style: solid; border-color: rgba(95,208,166,.45); color: var(--text); }
+.doc-drop input { display: none; }
+.doc-drop .big { font-size: 26px; margin-bottom: 4px; }
+.pac-pick { max-height: 190px; overflow-y: auto; }
+@media (max-width: 820px) {
+  .list-item:has(.doc-nota-1) { flex-wrap: wrap; }
+}
+
+/* ===== Gráficas (SVG propio) ===== */
+.gf-caja { margin-top: 8px; }
+.gf { width: 100%; height: auto; display: block; }
+.gf-guia { stroke: var(--line-soft); stroke-width: 1; }
+.gf-eje { fill: var(--muted); font-size: 11px; font-family: var(--font); }
+.gf-leyenda { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: 6px; }
+.gf-lg { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.gf-lg i { width: 11px; height: 3px; border-radius: 2px; display: inline-block; }
+.gf-vacia {
+  border: 1.5px dashed var(--line); border-radius: 12px; padding: 26px 16px;
+  text-align: center; color: var(--muted); font-size: 12.5px; background: var(--surface-2);
+}
+
+/* ===== Accesos del seguimiento en la ficha del paciente ===== */
+.sec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin-top: 14px; }
+.sec-card {
+  display: flex; align-items: center; gap: 12px; text-align: left; cursor: pointer;
+  font-family: inherit; color: var(--text); background: var(--surface);
+  border: 1px solid var(--line-soft); border-radius: var(--radius); padding: 13px 14px; transition: .15s;
+}
+.sec-card:hover { border-color: var(--accent); background: var(--surface-2); transform: translateY(-1px); }
+.sec-card .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sec-ic { font-size: 22px; flex: 0 0 auto; }
+.sec-nm { font-weight: 640; font-size: 13.5px; }
+.sec-sub { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ===== Revisiones: pliegues, medidas y fotos ===== */
+.sec-tit { font-weight: 660; font-size: 13.5px; margin: 20px 0 8px; color: var(--muted); }
+.pliegues { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0 12px; }
+.pliegues .field small { display: block; margin-top: -6px; font-size: 10.5px; line-height: 1.35; }
+.jp-res { background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 12px; padding: 12px; margin-top: 6px; }
+.rev-lista { display: flex; flex-direction: column; gap: 12px; }
+.rev-card .kpi .v { font-size: 17px; }
+/* En una .row los hijos se reparten el ancho; los botones de estas fichas, no */
+.rev-card .row > .btn, .alt-card .row > .btn, .ses-card .row > .btn { flex: 0 0 auto; }
+.dlt { font-size: 12px; font-weight: 700; }
+.dlt.baja { color: var(--accent); }
+.dlt.sube { color: var(--c-h); }
+.foto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.foto-card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); overflow: hidden; }
+.foto-img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; background: var(--surface-3); }
+.foto-pie { display: flex; align-items: center; gap: 6px; padding: 8px 10px; }
+.foto-huecos { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.foto-hueco { margin-bottom: 0; padding: 16px 10px; display: flex; flex-direction: column; gap: 4px; justify-content: center; min-height: 96px; }
+.foto-hueco b { color: var(--text); font-size: 13px; }
+.foto-falta {
+  display: flex; align-items: center; justify-content: center; aspect-ratio: 3/4; cursor: pointer;
+  border: 1.5px dashed var(--line); background: var(--surface-2); color: var(--muted); transition: .15s;
+}
+.foto-falta:hover { border-color: var(--accent); color: var(--text); }
+.foto-rota { padding: 30px 10px; text-align: center; color: var(--muted); font-size: 12px; }
+.comp-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+.comp-cab { margin-bottom: 8px; }
+.comp-tiras { display: flex; flex-direction: column; gap: 8px; }
+.comp-img { width: 100%; border-radius: 10px; display: block; background: var(--surface-3); }
+
+/* ===== Entrenamiento ===== */
+.ej-pick { max-height: 55vh; overflow-y: auto; }
+.ej-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Filtros del selector de ejercicios (grupo muscular y material) */
+.ej-filtros { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip-filtro {
+  font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+  background: var(--surface-2); color: var(--muted); border: 1px solid var(--line-soft);
+}
+.chip-filtro:hover { color: var(--text); border-color: var(--line); }
+.chip-filtro.activo { background: rgba(95, 208, 166, .14); color: var(--accent); border-color: rgba(95, 208, 166, .45); font-weight: 650; }
+.ej-lista { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.ej-fila {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px;
+  background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 11px; padding: 10px 12px;
+}
+.ej-fila .field { margin-bottom: 0; }
+.ej-nm { flex: 1 1 170px; min-width: 0; padding-bottom: 6px; }
+.ej-campo { flex: 0 0 82px; }
+.ej-nota { flex: 1 1 180px; }
+.ej-acc { display: flex; gap: 2px; padding-bottom: 4px; }
+.dia-nombre { font-weight: 650; }
+.ej-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin-top: 12px; }
+.ej-card {
+  display: flex; gap: 10px; background: var(--surface-2); border: 1px solid var(--line-soft);
+  border-radius: 11px; padding: 11px 13px;
+}
+.ses-card { margin-bottom: 12px; }
+.ses-ejs { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.ses-ej { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.ses-nm { font-size: 13px; font-weight: 600; min-width: 150px; }
+.series { display: flex; flex-direction: column; gap: 6px; }
+.serie-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.serie-fila input { width: 84px; margin: 0; }
+.serie-n { font-size: 12px; color: var(--muted); width: 62px; flex: 0 0 auto; }
+.serie-x, .serie-u { font-size: 12px; color: var(--muted); }
+
+/* ===== Agenda ===== */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; }
+.cal-cab { text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); padding-bottom: 2px; }
+.cal-dia {
+  min-height: 84px; border: 1px solid var(--line-soft); border-radius: 10px;
+  background: var(--surface-2); padding: 6px; cursor: pointer; transition: .12s; overflow: hidden;
+}
+.cal-dia:hover { border-color: var(--accent); }
+.cal-dia.vacio { background: transparent; border-color: transparent; cursor: default; }
+.cal-dia.hoy { border-color: var(--accent); }
+.cal-dia.hoy .cal-n { color: var(--accent); font-weight: 750; }
+.cal-dia.con-citas { background: var(--surface-3); }
+.cal-n { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.cal-citas { display: flex; flex-direction: column; gap: 3px; }
+.cal-cita {
+  font-size: 10.5px; line-height: 1.35; padding: 2px 5px; border-radius: 6px;
+  background: rgba(95,208,166,.14); color: var(--accent-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.prox-cita { display: flex; align-items: center; gap: 14px; border-color: rgba(95,208,166,.45); }
+.prox-ic { font-size: 30px; flex: 0 0 auto; }
+.prox-tx { font-size: 16px; font-weight: 650; margin: 2px 0 4px; }
+/* «miércoles, 30 de septiembre» -> solo la primera en mayúscula */
+.prox-tx::first-letter, .cal-mes::first-letter { text-transform: uppercase; }
+.cal-mes { white-space: nowrap; }
+.cal-nav > * { flex: 0 0 auto; }
+.cal-nav > .grow { flex: 1; }
+
+/* ===== Menú por opciones ===== */
+.op-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.op-card {
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  border-radius: 12px; padding: 12px 14px;
+}
+.op-num { font-size: 10.5px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.op-tit { font-weight: 650; font-size: 13.5px; line-height: 1.3; margin: 2px 0 8px; }
+.op-lista { list-style: none; margin: 0; padding: 0; font-size: 12.5px; color: var(--text); }
+.op-lista li { padding: 3px 0 3px 13px; position: relative; line-height: 1.4; }
+.op-lista li::before {
+  content: ""; position: absolute; left: 0; top: 10px;
+  width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
+}
+.op-prep { margin-top: 8px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.menu-texto {
+  background: rgba(95,208,166,.08); border: 1px solid rgba(95,208,166,.30);
+  border-radius: 10px; padding: 9px 12px; font-size: 13px; margin-bottom: 10px; white-space: pre-wrap;
+}
+/* Editor */
+/* Comparativa de fórmulas en la calculadora de calorías */
+.tabla-formulas { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.tabla-formulas th, .tabla-formulas td { padding: 6px 10px; border-bottom: 1px solid var(--line-soft); text-align: right; }
+.tabla-formulas th:first-child, .tabla-formulas td:first-child { text-align: left; }
+.tabla-formulas th { color: var(--muted); font-weight: 600; }
+.tabla-formulas tr.sel td { color: var(--accent); font-weight: 700; background: rgba(95, 208, 166, .08); }
+
+/* Cabecera del menú por opciones: nombre grande y resumen */
+.menu-hero {
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(95, 208, 166, .16), transparent 55%),
+    linear-gradient(135deg, var(--surface-2), var(--surface));
+  border: 1px solid rgba(95, 208, 166, .28);
+}
+.menu-hero-cab { display: flex; gap: 16px; align-items: center; margin-bottom: 14px; }
+.menu-hero-cab > .grow { flex: 1 1 auto; min-width: 0; }
+.menu-hero-cab input.menu-hero-nombre { width: 100%; max-width: none; }
+.menu-hero-ico {
+  flex: 0 0 auto; width: 62px; height: 62px; border-radius: 18px;
+  display: grid; place-items: center; font-size: 32px;
+  background: rgba(95, 208, 166, .14); border: 1px solid rgba(95, 208, 166, .35);
+  box-shadow: 0 6px 20px rgba(95, 208, 166, .12);
+}
+.menu-hero .field > span { color: var(--accent); font-weight: 650; }
+input.menu-hero-nombre {
+  font-size: 22px; font-weight: 800; letter-spacing: -.015em; color: var(--text);
+  background: rgba(13, 15, 20, .45);
+}
+.menu-hero-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 600px) {
+  .menu-hero-ico { width: 48px; height: 48px; font-size: 24px; border-radius: 14px; }
+  input.menu-hero-nombre { font-size: 18px; }
+}
+.menu-comidas { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.menu-comida {
+  background: var(--surface-2); border: 1px solid var(--line-soft); border-left: 4px solid var(--accent);
+  border-radius: 12px; padding: 12px 14px;
+}
+/* Cabecera de cada comida: destacada para ubicarse al recorrer el menú */
+.menu-comida-cab {
+  margin: -12px -14px 4px; padding: 12px 14px 12px;
+  background: rgba(95, 208, 166, .07); border-bottom: 1px solid var(--line-soft);
+  border-radius: 0 11px 0 0;
+}
+.comida-ico { flex: 0 0 auto; font-size: 26px; line-height: 1; margin-bottom: 7px; }
+.menu-comida-cab .field:has(.comida-nombre) > span { color: var(--accent); font-weight: 650; }
+input.comida-nombre {
+  font-size: 18px; font-weight: 750; letter-spacing: -.01em; color: var(--accent-2);
+}
+.menu-ops { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.menu-op { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 11px; padding: 10px 12px; }
+.menu-op textarea { font-family: var(--font); }
+.rol-card.elegida { border-color: var(--accent); background: var(--surface-3); }
+
+/* ===== Alternativas de alimentos ===== */
+.alt-card { padding: 14px 16px; }
+.alt-ops { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.alt-op {
+  font-size: 12.5px; padding: 5px 10px; border-radius: 999px;
+  background: rgba(95,208,166,.10); border: 1px solid rgba(95,208,166,.30); color: var(--text);
+}
+
+@media (max-width: 720px) {
+  .cal-dia { min-height: 62px; padding: 4px; }
+  .cal-cita { font-size: 9px; }
+  .comp-fotos { grid-template-columns: 1fr; }
+  .ej-campo { flex: 1 1 70px; }
+}
 
 /* Código de acceso del paciente */
 .codigo-acceso {

@@ -5,8 +5,8 @@ NP.views.pacientes = (function () {
 
   const SEXOS = ["Mujer", "Hombre", "Otro"];
 
-  /** Calculadora Harris-Benedict + actividad física.
-   *  datosIniciales: {sexo, edad, peso, altura, actividad, objetivoCalc, formula}
+  /** Calculadora de calorías (Harris-Benedict, Mifflin o Katch-McArdle/Cunningham con el % de grasa) + actividad física.
+   *  datosIniciales: {sexo, edad, peso, altura, grasa, actividad, objetivoCalc, formula}
    *  onUsar(kcalObjetivo, datos) al pulsar "Usar estas kcal". */
   function calculadoraKcal(datosIniciales, onUsar) {
     const C = NP.calorias;
@@ -18,6 +18,7 @@ NP.views.pacientes = (function () {
     const fEdad = el("input", { type: "number", value: d.edad ?? "", min: 10, max: 110, placeholder: "años" });
     const fPeso = el("input", { type: "number", value: d.peso ?? "", min: 25, max: 300, step: 0.1, placeholder: "kg" });
     const fAlt = el("input", { type: "number", value: d.altura ?? "", min: 100, max: 230, step: 0.5, placeholder: "cm" });
+    const fGrasa = el("input", { type: "number", value: d.grasa ?? "", min: 1, max: 69, step: 0.1, placeholder: "% (opcional)" });
     const fAct = el("select", {}, C.ACTIVIDAD.map((a) =>
       el("option", { value: a.key, ...(a.key === (d.actividad || "moderado") ? { selected: true } : {}) },
         `${a.label} (×${a.factor}) · ${a.desc}`)));
@@ -25,7 +26,8 @@ NP.views.pacientes = (function () {
       el("option", { value: o.key, ...(o.key === (d.objetivoCalc || "mantenimiento") ? { selected: true } : {}) },
         `${o.label} · ${o.desc}`)));
     const fForm = el("select", {}, Object.keys(C.FORMULAS).map((kf) =>
-      el("option", { value: kf, ...(kf === (d.formula || "hb_revisada") ? { selected: true } : {}) }, C.FORMULAS[kf].label)));
+      el("option", { value: kf, ...(kf === (d.formula || (d.grasa ? "katch" : "hb_revisada")) ? { selected: true } : {}) },
+        C.FORMULAS[kf].label + (C.FORMULAS[kf].grasa ? " · necesita el % de grasa" : ""))));
 
     const res = el("div", {});
     let ultimo = null;
@@ -33,7 +35,8 @@ NP.views.pacientes = (function () {
     function recalcular() {
       const datos = {
         sexo: fSexo.value, edad: Number(fEdad.value), peso: Number(fPeso.value),
-        altura: Number(fAlt.value), actividad: fAct.value, objetivo: fObj.value, formula: fForm.value,
+        altura: Number(fAlt.value), grasa: fGrasa.value === "" ? null : Number(fGrasa.value),
+        actividad: fAct.value, objetivo: fObj.value, formula: fForm.value,
       };
       res.innerHTML = "";
       if (!datos.edad || !datos.peso || !datos.altura) {
@@ -42,6 +45,12 @@ NP.views.pacientes = (function () {
         return;
       }
       const r = C.calcular(datos);
+      if (!r) {
+        ultimo = null;
+        res.appendChild(el("div", { class: "muted small" },
+          "Esta fórmula calcula el gasto a partir de la masa magra: escribe el % de grasa corporal (de los pliegues o la báscula)."));
+        return;
+      }
       const mac = C.macros(r.objetivo, datos.peso, datos.objetivo);
       const bmi = C.imc(datos.peso, datos.altura);
       ultimo = { datos, r };
@@ -58,11 +67,26 @@ NP.views.pacientes = (function () {
       }
       res.appendChild(el("div", { class: "small muted", style: "margin-top:8px" },
         `Proteínas ${mac.proteinas_g} g (${mac.prot_g_kg} g/kg) · Hidratos ${mac.hidratos_g} g · Grasas ${mac.grasas_g} g` +
-        (bmi ? ` · IMC ${bmi.valor} (${bmi.categoria})` : "")));
+        (bmi ? ` · IMC ${bmi.valor} (${bmi.categoria})` : "") +
+        (r.magra_kg != null ? ` · Masa magra ${fmt(r.magra_kg, 1)} kg` : "")));
+      // Con el % de grasa se pueden comparar todas las fórmulas: si difieren mucho, conviene fijarse
+      if (r.magra_kg != null) {
+        const filas = Object.keys(C.FORMULAS).map((kf) => {
+          const x = C.calcular(Object.assign({}, datos, { formula: kf }));
+          return el("tr", { class: kf === datos.formula ? "sel" : "" }, [
+            el("td", {}, C.FORMULAS[kf].label), el("td", {}, fmt(x.tmb)), el("td", {}, fmt(x.get)),
+          ]);
+        });
+        res.appendChild(el("div", { class: "small muted", style: "margin:14px 0 6px" }, "Comparativa de fórmulas (kcal/día):"));
+        res.appendChild(el("table", { class: "tabla-formulas" }, [
+          el("thead", {}, el("tr", {}, [el("th", {}, "Fórmula"), el("th", {}, "TMB"), el("th", {}, "Gasto total")])),
+          el("tbody", {}, filas),
+        ]));
+      }
       res.appendChild(el("div", { class: "small muted", style: "margin-top:10px;opacity:.75" },
         "Valores orientativos: la fórmula estima el gasto, ajústalo según la evolución real del paciente."));
     }
-    [fSexo, fEdad, fPeso, fAlt, fAct, fObj, fForm].forEach((f) => {
+    [fSexo, fEdad, fPeso, fAlt, fGrasa, fAct, fObj, fForm].forEach((f) => {
       f.addEventListener("input", recalcular); f.addEventListener("change", recalcular);
     });
 
@@ -72,6 +96,7 @@ NP.views.pacientes = (function () {
         el("label", { class: "field" }, [el("span", {}, "Edad (años)"), fEdad]),
         el("label", { class: "field" }, [el("span", {}, "Peso (kg)"), fPeso]),
         el("label", { class: "field" }, [el("span", {}, "Altura (cm)"), fAlt]),
+        el("label", { class: "field" }, [el("span", {}, "Grasa (%)"), fGrasa]),
       ]),
       el("label", { class: "field" }, [el("span", {}, "Actividad física"), fAct]),
       el("label", { class: "field" }, [el("span", {}, "Objetivo calórico"), fObj]),
@@ -120,7 +145,7 @@ NP.views.pacientes = (function () {
       calculadoraKcal({
         sexo: fSexo.value || p.sexo,
         edad: NP.calorias.edadDe(fNac.value),
-        peso: num(fPeso.value), altura: num(fAltura.value),
+        peso: num(fPeso.value), altura: num(fAltura.value), grasa: num(fGrasa.value),
         actividad: fActividad.value,
         objetivoCalc: p.objetivo_calc, formula: p.formula,
       }, (kcal, datos) => {
@@ -236,7 +261,7 @@ NP.views.pacientes = (function () {
       el("button", { class: "btn", onclick: () => accesoPaciente(p) }, "🔑 Acceso del paciente"),
       el("button", { class: "btn", onclick: () => NP.app.go("#/mensajes/" + p.id) },
         "💬 Mensajes" + (NP.store.noLeidos(p.id, "nutri") ? " (" + NP.store.noLeidos(p.id, "nutri") + ")" : "")),
-      el("button", { class: "btn btn-primary", onclick: () => crearPlan(p) }, "＋ Nuevo plan mensual"),
+      el("button", { class: "btn btn-primary", onclick: () => crearPlan(p) }, "＋ Nuevo plan"),
     ]));
 
     const bmi = imc(p);
@@ -246,7 +271,7 @@ NP.views.pacientes = (function () {
 
     view.appendChild(el("div", { class: "panel" }, [
       el("div", { class: "kpis" }, [
-        kpi("Objetivo", p.objetivo),
+        kpiTexto("Objetivo", p.objetivo),
         kpi("Kcal/día", fmt(p.kcal_objetivo)),
         a != null ? kpi("Edad", a + " años") : null,
         p.sexo ? kpi("Sexo", p.sexo) : null,
@@ -262,6 +287,9 @@ NP.views.pacientes = (function () {
       p.notas ? el("div", { class: "small muted", style: "margin-top:10px" }, "📝 " + p.notas) : null,
     ]));
 
+    view.appendChild(seccionesDe(p));
+    view.appendChild(progresoDe(p));
+
     const cont = el("div", { style: "margin-top:16px" });
     if (!planes.length) {
       cont.appendChild(el("div", { class: "empty" }, [
@@ -272,13 +300,18 @@ NP.views.pacientes = (function () {
     } else {
       const list = el("div", { class: "list" });
       planes.forEach((pl) => {
+        const menu = NP.esMenu(pl);
+        const ruta = (menu ? "#/menu/" : "#/plan/") + pl.id;
         list.appendChild(el("div", { class: "list-item" }, [
-          el("div", { class: "avatar" }, "🗓️"),
-          el("div", { class: "grow", onclick: () => NP.app.go("#/plan/" + pl.id) }, [
+          el("div", { class: "avatar" }, menu ? "🍽️" : "🗓️"),
+          el("div", { class: "grow", onclick: () => NP.app.go(ruta) }, [
             el("div", { class: "name" }, pl.nombre),
-            el("div", { class: "small muted" }, resumenPlan(pl) + " · " + fmt(mediaKcal(pl)) + " kcal/día"),
+            el("div", { class: "small muted" }, menu
+              ? NP.views.menu.resumen(pl)
+              : resumenPlan(pl) + " · " + fmt(mediaKcal(pl)) + " kcal/día"),
           ]),
-          el("button", { class: "btn btn-sm", onclick: () => NP.app.go("#/plan/" + pl.id) }, "Abrir"),
+          el("span", { class: "pill" }, menu ? "Por opciones" : "Semanal"),
+          el("button", { class: "btn btn-sm", onclick: () => NP.app.go(ruta) }, "Abrir"),
           el("button", { class: "btn btn-sm", onclick: () => { duplicar(pl); NP.app.go("#/paciente/" + p.id); } }, "Duplicar"),
           el("button", { class: "btn btn-sm btn-danger", onclick: () => { if (confirm("¿Borrar este plan?")) { NP.store.deletePlan(pl.id); NP.app.go("#/paciente/" + p.id); } } }, "🗑"),
         ]));
@@ -286,6 +319,54 @@ NP.views.pacientes = (function () {
       cont.appendChild(list);
     }
     view.appendChild(cont);
+  }
+
+  /* Accesos al seguimiento del paciente: revisiones, entrenamiento, citas... */
+  function seccionesDe(p) {
+    const revs = NP.store.registrosDe(p.id, "revision");
+    const rutina = NP.views.entreno.rutinaActiva(p.id);
+    const sesiones = NP.store.registrosDe(p.id, "actividad").length;
+    const proxima = NP.store.registrosDe(p.id, "cita").filter((c) => String(c.fecha) >= new Date().toISOString().slice(0, 10))[0];
+    const alt = NP.store.registrosDe(p.id, "alternativa").length;
+    const docs = NP.store.documentosDe(p.id).length;
+    const fotos = NP.store.registrosDe(p.id, "foto").length;
+
+    const tarjeta = (ic, titulo, detalle, hash) =>
+      el("button", { class: "sec-card", onclick: () => NP.app.go(hash) }, [
+        el("span", { class: "sec-ic" }, ic),
+        el("span", { class: "grow" }, [
+          el("span", { class: "sec-nm" }, titulo),
+          el("span", { class: "sec-sub" }, detalle),
+        ]),
+      ]);
+
+    return el("div", { class: "sec-grid" }, [
+      tarjeta("📈", "Revisiones", revs.length
+        ? revs.length + " revisión(es)" + (fotos ? " · " + fotos + " foto(s)" : "") +
+          " · última " + NP.views.revisiones.fechaLarga(revs[revs.length - 1].fecha)
+        : "Peso, pliegues y fotos", "#/revisiones/" + p.id),
+      tarjeta("🏋️", "Entrenamiento", rutina
+        ? rutina.nombre + " · " + sesiones + " sesión(es) apuntadas"
+        : "Sin rutina todavía", "#/entreno/" + p.id),
+      tarjeta("🗓️", "Citas", proxima
+        ? "Próxima: " + NP.views.revisiones.fechaLarga(proxima.fecha) + " " + String(proxima.fecha).slice(11, 16)
+        : "Ninguna puesta", "#/agenda/" + p.id),
+      tarjeta("🥗", "Recetas y alternativas", alt ? alt + " guardada(s)" : "Cambios de alimentos", "#/alternativas/" + p.id),
+      tarjeta("📂", "Documentos", docs ? docs + " PDF enviado(s)" : "Rutinas, guías y PDF", "#/documentos/" + p.id),
+    ]);
+  }
+
+  /* Gráfica de peso y grasa, si ya hay revisiones que dibujar */
+  function progresoDe(p) {
+    const revs = NP.store.registrosDe(p.id, "revision");
+    if (revs.length < 2) return el("div", {});
+    return el("div", { class: "panel", style: "margin-top:16px" }, [
+      el("div", { class: "row", style: "align-items:center;margin-bottom:6px" }, [
+        el("div", { class: "grow side-ttl", style: "margin:0" }, "📈 Progresión"),
+        el("button", { class: "btn btn-sm", style: "flex:0 0 auto", onclick: () => NP.app.go("#/revisiones/" + p.id) }, "Ver revisiones"),
+      ]),
+      NP.views.revisiones.grafica(p),
+    ]);
   }
 
   /* Acceso del paciente: código con el que crea su cuenta y entra a ver sus menús */
@@ -314,7 +395,8 @@ NP.views.pacientes = (function () {
       codigoEl,
       el("div", { class: "small muted", style: "margin-top:14px;line-height:1.5" },
         "Con su cuenta el paciente ve sus menús de la semana (solo lectura), las recetas con sus " +
-        "gramos y elaboración, y puede escribirte por el chat. No ve a tus otros pacientes."),
+        "gramos y elaboración, los PDF que le mandes (rutinas, ideas de recetas...) y puede " +
+        "escribirte por el chat. No ve a tus otros pacientes."),
     ]);
 
     const m = modal({
@@ -344,19 +426,43 @@ NP.views.pacientes = (function () {
 
   function crearPlan(p) {
     const mes = new Date().toLocaleDateString("es-ES", { month: "long", year: "numeric" });
-    const inp = el("input", { value: "Plan " + mes.charAt(0).toUpperCase() + mes.slice(1) });
+    const mesTit = mes.charAt(0).toUpperCase() + mes.slice(1);
+    const inp = el("input", { value: "Plan " + mesTit });
+    let tipo = "semanal";
+
+    // Dos formas de trabajar: la rejilla de 7 días, o varias opciones por comida
+    const opciones = [
+      { key: "semanal", ic: "🗓️", tit: "Semana completa", tx: "Una semana con su menú para cada día, que se repite durante el mes. Calcula las kcal y los macros de cada comida." },
+      { key: "opciones", ic: "🍽️", tit: "Menú por opciones", tx: "Días de entreno y de descanso, y en cada comida varias opciones equivalentes entre las que el paciente elige cada día." },
+    ];
+    const tarjetas = opciones.map((o) => {
+      const card = el("button", { class: "rol-card" + (o.key === tipo ? " elegida" : ""), type: "button", onclick: () => {
+        tipo = o.key;
+        tarjetas.forEach((c) => c.classList.remove("elegida"));
+        card.classList.add("elegida");
+        inp.value = tipo === "opciones" ? "Programa nutricional de " + p.nombre.split(" ")[0] : "Plan " + mesTit;
+      } }, [
+        el("div", { class: "rol-ic" }, o.ic),
+        el("div", { class: "rol-tit" }, o.tit),
+        el("div", { class: "rol-tx" }, o.tx),
+      ]);
+      return card;
+    });
+
     const body = el("div", {}, [
-      el("label", { class: "field" }, [el("span", {}, "Nombre del plan (normalmente el mes)"), inp]),
-      el("div", { class: "small muted" }, "Diseñarás una semana que se repetirá durante el mes."),
+      el("div", { class: "small muted", style: "margin-bottom:8px" }, "¿Cómo quieres montar este plan?"),
+      el("div", { class: "auth-roles" }, tarjetas),
+      el("label", { class: "field", style: "margin-top:14px" }, [el("span", {}, "Nombre del plan"), inp]),
     ]);
     const m = modal({
-      title: "Nuevo plan mensual", body,
+      title: "Nuevo plan", body, wide: true,
       footer: [
         el("button", { class: "btn btn-ghost", onclick: () => m.close() }, "Cancelar"),
         el("button", {
           class: "btn btn-primary", onclick: () => {
-            const pl = NP.store.savePlan(NP.nuevoPlan(p.id, inp.value.trim() || "Plan"));
-            m.close(); NP.app.go("#/plan/" + pl.id);
+            const nombre = inp.value.trim() || "Plan";
+            const pl = NP.store.savePlan(tipo === "opciones" ? NP.nuevoMenu(p.id, nombre) : NP.nuevoPlan(p.id, nombre));
+            m.close(); NP.app.go((tipo === "opciones" ? "#/menu/" : "#/plan/") + pl.id);
           },
         }, "Crear plan"),
       ],
@@ -383,6 +489,8 @@ NP.views.pacientes = (function () {
     return tot / 7;
   };
   const kpi = (l, v) => el("div", { class: "kpi" }, [el("div", { class: "v" }, String(v)), el("div", { class: "l" }, l)]);
+  // KPI con texto (p. ej. "Mantenimiento"): letra más pequeña para que no se salga de la casilla
+  const kpiTexto = (l, v) => el("div", { class: "kpi" }, [el("div", { class: "v v-texto" }, String(v)), el("div", { class: "l" }, l)]);
 
   // Línea resumen para la lista: solo los datos que el paciente tenga rellenos
   function resumenPersonal(p) {

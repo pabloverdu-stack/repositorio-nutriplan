@@ -37,7 +37,10 @@ NP.util = (function () {
   // Modal genérico. opts: {title, body(HTMLElement), footer(HTMLElement), wide}
   function modal(opts) {
     const root = document.getElementById("modal-root");
-    const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
+    const close = () => {
+      overlay.remove(); document.removeEventListener("keydown", onKey);
+      if (opts.onClose) opts.onClose();
+    };
     const onKey = (e) => { if (e.key === "Escape") close(); };
     const box = el("div", { class: "modal" + (opts.wide ? " wide" : "") }, [
       el("div", { class: "modal-head" }, [

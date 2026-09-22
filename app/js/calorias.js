@@ -1,4 +1,5 @@
-/* calorias.js — cálculo de necesidades energéticas (Harris-Benedict + actividad física) */
+/* calorias.js — cálculo de necesidades energéticas (Harris-Benedict, Mifflin o, con el % de
+   grasa, Katch-McArdle / Cunningham sobre la masa magra) + actividad física */
 NP.calorias = (function () {
 
   // Niveles de actividad física (PAL · Physical Activity Level)
@@ -40,6 +41,20 @@ NP.calorias = (function () {
       label: "Mifflin-St Jeor (1990)",
       tmb: (s, peso, altura, edad) => 10 * peso + 6.25 * altura - 5 * edad + (s === "hombre" ? 5 : -161),
     },
+    // Las dos siguientes parten de la masa magra (peso - grasa), así que necesitan el % de grasa.
+    // No dependen del sexo ni de la edad: la diferencia entre personas ya la recoge la masa magra.
+    // Katch-McArdle — la más usada cuando se conoce la composición corporal
+    katch: {
+      label: "Katch-McArdle (masa magra)",
+      grasa: true,
+      tmb: (s, peso, altura, edad, magra) => 370 + 21.6 * magra,
+    },
+    // Cunningham (1980) — pensada para personas activas / deportistas
+    cunningham: {
+      label: "Cunningham (masa magra · deportistas)",
+      grasa: true,
+      tmb: (s, peso, altura, edad, magra) => 500 + 22 * magra,
+    },
   };
 
   /** Normaliza el sexo a lo que usan las fórmulas: "hombre" | "mujer" | "indeterminado".
@@ -70,18 +85,28 @@ NP.calorias = (function () {
     return o ? o.ajuste : 0;
   };
 
+  /** Masa magra en kg a partir del peso y el % de grasa; null si falta el % o no es válido */
+  function masaMagra(peso, grasaPct) {
+    const p = Number(peso), g = Number(grasaPct);
+    if (!(p > 0) || grasaPct === "" || grasaPct == null || !(g > 0) || g >= 70) return null;
+    return p * (1 - g / 100);
+  }
+
   /**
    * Calcula TMB, gasto total y kcal objetivo.
-   * datos: {sexo:'hombre'|'mujer', edad, peso, altura, actividad, objetivo, formula}
+   * datos: {sexo:'hombre'|'mujer', edad, peso, altura, grasa (% opcional), actividad, objetivo, formula}
+   * Con una fórmula de masa magra y sin % de grasa devuelve null.
    */
   function calcular(d) {
     const f = FORMULAS[d.formula] || FORMULAS.hb_revisada;
     const s = normSexo(d.sexo);
     const peso = Number(d.peso), altura = Number(d.altura), edad = Number(d.edad);
+    const magra = masaMagra(peso, d.grasa);
+    if (f.grasa && magra == null) return null;
     // Si el sexo no consta, se promedian ambas fórmulas en vez de asumir uno.
     const tmb = s === "indeterminado"
-      ? (f.tmb("hombre", peso, altura, edad) + f.tmb("mujer", peso, altura, edad)) / 2
-      : f.tmb(s, peso, altura, edad);
+      ? (f.tmb("hombre", peso, altura, edad, magra) + f.tmb("mujer", peso, altura, edad, magra)) / 2
+      : f.tmb(s, peso, altura, edad, magra);
     const factor = factorDe(d.actividad);
     const get = tmb * factor;                      // Gasto Energético Total
     const ajuste = ajusteDe(d.objetivo);
@@ -93,6 +118,7 @@ NP.calorias = (function () {
       ajuste,
       objetivo: Math.round(objetivo / 10) * 10,     // redondeo a 10 kcal
       formula: f.label,
+      magra_kg: magra == null ? null : Math.round(magra * 10) / 10,
     };
   }
 
@@ -122,5 +148,5 @@ NP.calorias = (function () {
     return { valor: Math.round(v * 10) / 10, categoria: cat };
   }
 
-  return { ACTIVIDAD, OBJETIVOS, FORMULAS, calcular, macros, imc, factorDe, ajusteDe, normSexo, edadDe };
+  return { ACTIVIDAD, OBJETIVOS, FORMULAS, calcular, masaMagra, macros, imc, factorDe, ajusteDe, normSexo, edadDe };
 })();

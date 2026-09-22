@@ -156,17 +156,19 @@ NP.comp = (function () {
   // onAlimentos (opcional): si se pasa, muestra un botón para añadir alimentos sueltos.
   function recipePicker({ tipo, title, onPick, onAlimentos, onAlimentoRapido }) {
     const { el } = NP.util;
-    let soloFav = false;
+    let soloFav = false, soloPropias = false;
     const q = el("input", { placeholder: "Buscar receta...", class: "grow" });
     const grid = el("div", { class: "grid grid-cards" });
     const info = el("div", { class: "small muted", style: "margin-bottom:10px" });
 
     const seg = el("div", { class: "seg", style: "flex:0 0 auto" }, [
-      el("button", { class: "active", onclick: (e) => setFav(false, e.target) }, "Todas"),
-      el("button", { onclick: (e) => setFav(true, e.target) }, "★ Favoritas"),
+      el("button", { class: "active", onclick: (e) => setFiltro("todas", e.target) }, "Todas"),
+      el("button", { onclick: (e) => setFiltro("fav", e.target) }, "★ Favoritas"),
+      el("button", { title: "Las recetas que has creado tú", onclick: (e) => setFiltro("propias", e.target) }, "✎ Mis recetas"),
     ]);
-    function setFav(v, btn) {
-      soloFav = v;
+    function setFiltro(v, btn) {
+      soloFav = v === "fav";
+      soloPropias = v === "propias";
       Array.from(seg.children).forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       refresh();
@@ -175,17 +177,21 @@ NP.comp = (function () {
     const LIMITE = 120;
     function refresh() {
       grid.innerHTML = "";
-      const res = NP.data.buscarRecetas({ q: q.value, tipo, limite: LIMITE, soloFav });
+      const res = NP.data.buscarRecetas({ q: q.value, tipo, limite: LIMITE, soloFav, soloPropias });
       const nFav = NP.store.getFavoritas().length;
       // Al llegar al tope hay más recetas de las que se ven: se avisa para no dar por hecho que son todas
       const tope = res.length === LIMITE ? "+ (afina la búsqueda)" : "";
       info.textContent = soloFav
         ? `${res.length} favorita(s) de este tipo${tope}`
-        : `${res.length} receta(s)${tope} · ${nFav} favorita(s) guardadas`;
+        : soloPropias
+          ? `${res.length} receta(s) tuya(s)${tope}`
+          : `${res.length} receta(s)${tope} · ${nFav} favorita(s) guardadas`;
       if (!res.length) {
         grid.appendChild(el("div", { class: "empty" }, soloFav
           ? "Aún no tienes favoritas de este tipo. Marca recetas con ☆ para tenerlas a mano."
-          : "Sin resultados."));
+          : soloPropias
+            ? "Aún no has creado recetas propias. Puedes hacerlo en el constructor de recetas."
+            : "Sin resultados."));
         return;
       }
       res.forEach((r) => {

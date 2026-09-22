@@ -7,19 +7,27 @@ NP.app = (function () {
   const authRoot = () => document.getElementById("auth-root");
 
   const TITULOS = {
-    pacientes: "Pacientes", recetas: "Recetas", constructor: "Constructor por ingredientes",
-    "mi-plan": "Mi menú", "mi-chat": "Mi nutricionista", "mi-perfil": "Mi perfil",
+    pacientes: "Pacientes", recetas: "Recetas", constructor: "Constructor por ingredientes", agenda: "Agenda",
+    "mi-plan": "Mi menú", "mi-docs": "Mis documentos", "mi-chat": "Mi nutricionista", "mi-perfil": "Mi perfil",
+    "mi-entreno": "Mi entreno", "mi-progreso": "Mi progreso", "mi-agenda": "Mi agenda", "mis-recetas": "Mis recetas",
   };
 
   // Menú lateral según quién ha entrado
   const NAV = {
     nutri: [
       { key: "pacientes", ic: "👥", tx: "Pacientes", hash: "#/pacientes", badge: () => NP.store.noLeidosNutri() },
+      { key: "agenda", ic: "🗓️", tx: "Agenda", hash: "#/agenda" },
       { key: "recetas", ic: "🍽️", tx: "Recetas", hash: "#/recetas" },
       { key: "constructor", ic: "🧩", tx: "Constructor", hash: "#/constructor" },
     ],
     cliente: [
       { key: "mi-plan", ic: "🗓️", tx: "Mi menú", hash: "#/mi-plan" },
+      { key: "mi-entreno", ic: "🏋️", tx: "Mi entreno", hash: "#/mi-entreno" },
+      { key: "mi-progreso", ic: "📈", tx: "Mi progreso", hash: "#/mi-progreso" },
+      { key: "mis-recetas", ic: "🥗", tx: "Mis recetas", hash: "#/mis-recetas" },
+      { key: "mi-agenda", ic: "📅", tx: "Mi agenda", hash: "#/mi-agenda" },
+      { key: "mi-docs", ic: "📂", tx: "Mis documentos", hash: "#/mi-docs",
+        badge: () => { const p = NP.auth.pacienteActual(); return p ? NP.store.docsNuevos(p.id) : 0; } },
       { key: "mi-chat", ic: "💬", tx: "Mi nutricionista", hash: "#/mi-chat",
         badge: () => { const p = NP.auth.pacienteActual(); return p ? NP.store.noLeidos(p.id, "paciente") : 0; } },
       { key: "mi-perfil", ic: "🙋", tx: "Mi perfil", hash: "#/mi-perfil" },
@@ -27,9 +35,12 @@ NP.app = (function () {
   };
   // Ruta base -> apartado del menú que queda marcado
   const SECCION = {
-    pacientes: "pacientes", paciente: "pacientes", plan: "pacientes", mensajes: "pacientes",
-    recetas: "recetas", constructor: "constructor",
-    "mi-plan": "mi-plan", "mi-chat": "mi-chat", "mi-perfil": "mi-perfil",
+    pacientes: "pacientes", paciente: "pacientes", plan: "pacientes", menu: "pacientes",
+    mensajes: "pacientes", documentos: "pacientes",
+    revisiones: "pacientes", entreno: "pacientes", rutina: "pacientes", alternativas: "pacientes",
+    recetas: "recetas", constructor: "constructor", agenda: "agenda",
+    "mi-plan": "mi-plan", "mi-docs": "mi-docs", "mi-chat": "mi-chat", "mi-perfil": "mi-perfil",
+    "mi-entreno": "mi-entreno", "mi-progreso": "mi-progreso", "mi-agenda": "mi-agenda", "mis-recetas": "mis-recetas",
   };
   const INICIO = { nutri: "#/pacientes", cliente: "#/mi-plan" };
 
@@ -85,14 +96,15 @@ NP.app = (function () {
     let base = parts[0] || "";
     // Cada rol solo puede entrar en sus propias rutas
     const permitidas = u.rol === "nutri"
-      ? ["pacientes", "paciente", "plan", "mensajes", "recetas", "constructor"]
-      : ["mi-plan", "mi-chat", "mi-perfil"];
+      ? ["pacientes", "paciente", "plan", "menu", "mensajes", "documentos", "recetas", "constructor",
+         "revisiones", "entreno", "rutina", "alternativas", "agenda"]
+      : ["mi-plan", "mi-docs", "mi-chat", "mi-perfil", "mi-entreno", "mi-progreso", "mi-agenda", "mis-recetas"];
     if (permitidas.indexOf(base) < 0) { go(INICIO[u.rol]); return; }
 
     const v = view();
     v.innerHTML = "";
-    // el plan semanal necesita todo el ancho de la pantalla; el resto de vistas se limitan
-    v.classList.toggle("full", base === "plan" || base === "mi-plan");
+    // el plan semanal y el calendario necesitan todo el ancho; el resto de vistas se limitan
+    v.classList.toggle("full", ["plan", "menu", "mi-plan", "agenda", "rutina"].indexOf(base) >= 0);
     document.querySelector(".sidebar").classList.remove("open");
     setActiveNav(base);
     if (TITULOS[base]) setTitle(TITULOS[base]);
@@ -102,13 +114,25 @@ NP.app = (function () {
       case "pacientes": NP.views.pacientes.lista(v); break;
       case "paciente": NP.views.pacientes.detalle(v, parts[1]); break;
       case "plan": NP.views.plan(v, parts[1]); break;
+      case "menu": NP.views.menu.editor(v, parts[1]); break;
       case "mensajes": NP.views.mensajes(v, parts[1]); break;
+      case "documentos": NP.views.documentos.nutri(v, parts[1]); break;
+      case "revisiones": NP.views.revisiones.nutri(v, parts[1]); break;
+      case "entreno": NP.views.entreno.nutri(v, parts[1]); break;
+      case "rutina": NP.views.entreno.editor(v, parts[1]); break;
+      case "alternativas": NP.views.alternativas.nutri(v, parts[1]); break;
+      case "agenda": NP.views.agenda.nutri(v, parts[1]); break;
       case "recetas": NP.views.recetas(v); break;
       case "constructor": NP.views.constructor(v); break;
       // --- Paciente ---
       case "mi-plan": NP.views.cliente.plan(v); break;
+      case "mi-docs": NP.views.documentos.cliente(v); break;
       case "mi-chat": NP.views.cliente.chat(v); break;
       case "mi-perfil": NP.views.cliente.perfil(v); break;
+      case "mi-entreno": NP.views.entreno.cliente(v); break;
+      case "mi-progreso": NP.views.revisiones.cliente(v); break;
+      case "mi-agenda": NP.views.agenda.cliente(v); break;
+      case "mis-recetas": NP.views.alternativas.cliente(v); break;
     }
     refrescarNav();
   }

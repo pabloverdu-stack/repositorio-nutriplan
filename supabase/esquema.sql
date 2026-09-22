@@ -84,10 +84,65 @@ create table if not exists public.favoritas (
   primary key (nutri_id, receta_id)
 );
 
+-- PDF que el nutricionista le manda al paciente (rutinas de entrenamiento,
+-- ideas de recetas, guías...). El archivo va en el almacén "documentos"
+-- (Storage) y aquí queda la ficha de cada envío. Si el mismo PDF se manda
+-- a varios pacientes hay una fila por paciente, todas con la misma `ruta`.
+create table if not exists public.documentos (
+  id          text primary key default gen_random_uuid()::text,
+  paciente_id text not null references public.pacientes on delete cascade,
+  nutri_id    uuid not null references auth.users on delete cascade,
+  titulo      text not null,
+  categoria   text not null default 'otros',
+  nota        text not null default '',
+  ruta        text not null,          -- <nutri_id>/<id>.pdf dentro del almacén
+  archivo     text,                   -- nombre original, para la descarga
+  tamano      bigint,
+  visto       boolean not null default false,
+  fecha       timestamptz not null default now()
+);
+
+-- Todo lo que se va anotando de un paciente a lo largo del seguimiento:
+-- revisiones (peso, pliegues y perímetros), fotos de progreso, rutinas de
+-- entrenamiento, el registro de actividad que apunta el propio paciente, las
+-- citas y las alternativas de alimentos. Van en una sola tabla porque se
+-- guardan y se consultan igual; `tipo` dice qué es y `datos` lleva sus campos.
+create table if not exists public.registros (
+  id          text primary key default gen_random_uuid()::text,
+  paciente_id text not null references public.pacientes on delete cascade,
+  tipo        text not null,
+  fecha       text not null default '',   -- ISO (2026-09-18 o 2026-09-18T10:30), para ordenar
+  datos       jsonb not null default '{}'::jsonb,
+  creado      timestamptz not null default now()
+);
+-- Los tipos admitidos van aparte para poder añadir nuevos en una base ya creada.
+-- «diario» es el día a día del paciente: el agua que bebe y las comidas que marca como hechas.
+alter table public.registros drop constraint if exists registros_tipo_check;
+alter table public.registros add constraint registros_tipo_check
+  check (tipo in ('revision', 'foto', 'rutina', 'actividad', 'cita', 'alternativa', 'diario'));
+
 -- Índices para las consultas que la app hace constantemente.
 create index if not exists idx_pacientes_nutri   on public.pacientes (nutri_id);
 create index if not exists idx_planes_paciente   on public.planes (paciente_id);
 create index if not exists idx_mensajes_paciente on public.mensajes (paciente_id, fecha);
+create index if not exists idx_documentos_paciente on public.documentos (paciente_id, fecha);
+create index if not exists idx_registros_paciente on public.registros (paciente_id, tipo, fecha);
+
+-- Almacén privado de los PDF: solo PDF y como mucho 20 MB cada uno.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('documentos', 'documentos', false, 20971520, array['application/pdf'])
+on conflict (id) do update
+  set public = false,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
+-- Almacén privado de las fotos de progreso: imágenes de hasta 10 MB.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('fotos', 'fotos', false, 10485760, array['image/jpeg', 'image/png', 'image/webp', 'image/heic'])
+on conflict (id) do update
+  set public = false,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
 
 
 -- ---------- Funciones auxiliares ----------
@@ -189,6 +244,16 @@ begin
 end;
 $$;
 
+-- El paciente marca como visto un documento suyo. Va por función para que
+-- solo pueda tocar esa casilla y no el título, la nota o el archivo.
+create or replace function public.marcar_documento_visto(p_id text)
+returns void
+language sql security definer set search_path = public as $$
+  update public.documentos
+     set visto = true
+   where id = p_id and paciente_id = public.mi_paciente_id();
+$$;
+
 
 -- ---------- Reglas de acceso (Row Level Security) ----------
 -- Esta es la parte que de verdad protege los datos: sin ella, cualquiera
@@ -200,6 +265,8 @@ alter table public.planes          enable row level security;
 alter table public.mensajes        enable row level security;
 alter table public.recetas_propias enable row level security;
 alter table public.favoritas       enable row level security;
+alter table public.documentos      enable row level security;
+alter table public.registros       enable row level security;
 
 -- Perfiles: cada uno el suyo; el paciente además ve el de su
 -- nutricionista, porque necesita su nombre para el chat.
@@ -271,3 +338,96 @@ create policy "mis recetas" on public.recetas_propias
 drop policy if exists "mis favoritas" on public.favoritas;
 create policy "mis favoritas" on public.favoritas
   for all using (nutri_id = auth.uid()) with check (nutri_id = auth.uid());
+
+-- Documentos: el nutricionista los gestiona (solo para sus pacientes);
+-- el paciente solo lee los suyos (el "visto" lo marca con la función).
+drop policy if exists "nutri gestiona documentos" on public.documentos;
+create policy "nutri gestiona documentos" on public.documentos
+  for all using (nutri_id = auth.uid())
+      with check (nutri_id = auth.uid()
+                  and exists (select 1 from public.pacientes p
+                               where p.id = documentos.paciente_id and p.nutri_id = auth.uid()));
+
+drop policy if exists "paciente ve sus documentos" on public.documentos;
+create policy "paciente ve sus documentos" on public.documentos
+  for select using (paciente_id = public.mi_paciente_id());
+
+-- Registros del seguimiento: los gestiona el nutricionista dueño del paciente.
+-- El paciente lee todos los suyos y además puede anotar su entrenamiento, subir
+-- fotos y apuntar su peso (revisiones marcadas como suyas); las revisiones del
+-- nutricionista, las rutinas y las citas solo las toca él.
+drop policy if exists "nutri gestiona registros" on public.registros;
+create policy "nutri gestiona registros" on public.registros
+  for all using (exists (select 1 from public.pacientes p
+                          where p.id = registros.paciente_id and p.nutri_id = auth.uid()))
+      with check (exists (select 1 from public.pacientes p
+                          where p.id = registros.paciente_id and p.nutri_id = auth.uid()));
+
+drop policy if exists "paciente ve sus registros" on public.registros;
+create policy "paciente ve sus registros" on public.registros
+  for select using (paciente_id = public.mi_paciente_id());
+
+-- Lo que el paciente puede anotar por su cuenta
+create or replace function public.registro_del_paciente(p_tipo text, p_datos jsonb)
+returns boolean
+language sql immutable as $$
+  select p_tipo in ('actividad', 'foto', 'diario')
+      or (p_tipo = 'revision' and p_datos->>'origen' = 'paciente');
+$$;
+
+drop policy if exists "paciente anota lo suyo" on public.registros;
+create policy "paciente anota lo suyo" on public.registros
+  for insert with check (paciente_id = public.mi_paciente_id()
+                         and public.registro_del_paciente(tipo, datos));
+
+drop policy if exists "paciente edita lo suyo" on public.registros;
+create policy "paciente edita lo suyo" on public.registros
+  for update using (paciente_id = public.mi_paciente_id()
+                    and public.registro_del_paciente(tipo, datos))
+      with check (paciente_id = public.mi_paciente_id()
+                  and public.registro_del_paciente(tipo, datos));
+
+drop policy if exists "paciente borra lo suyo" on public.registros;
+create policy "paciente borra lo suyo" on public.registros
+  for delete using (paciente_id = public.mi_paciente_id()
+                    and public.registro_del_paciente(tipo, datos));
+
+-- Archivos del almacén "documentos". Cada nutricionista sube a su carpeta
+-- (<su id>/...) y solo toca esa; el paciente puede leer un archivo solo si
+-- tiene una ficha de documento que apunte a él.
+drop policy if exists "nutriplan: nutri gestiona sus pdf" on storage.objects;
+create policy "nutriplan: nutri gestiona sus pdf" on storage.objects
+  for all using (bucket_id = 'documentos' and (storage.foldername(name))[1] = auth.uid()::text)
+      with check (bucket_id = 'documentos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "nutriplan: paciente lee sus pdf" on storage.objects;
+create policy "nutriplan: paciente lee sus pdf" on storage.objects
+  for select using (
+    bucket_id = 'documentos'
+    and exists (select 1 from public.documentos d
+                 where d.ruta = objects.name and d.paciente_id = public.mi_paciente_id()));
+
+-- Fotos de progreso. Van en una carpeta por paciente (<paciente_id>/...): el
+-- nutricionista entra en las de sus pacientes y cada paciente solo en la suya.
+drop policy if exists "nutriplan: nutri gestiona fotos" on storage.objects;
+create policy "nutriplan: nutri gestiona fotos" on storage.objects
+  for all using (
+    bucket_id = 'fotos'
+    and exists (select 1 from public.pacientes p
+                 where p.id = (storage.foldername(name))[1] and p.nutri_id = auth.uid()))
+  with check (
+    bucket_id = 'fotos'
+    and exists (select 1 from public.pacientes p
+                 where p.id = (storage.foldername(name))[1] and p.nutri_id = auth.uid()));
+
+drop policy if exists "nutriplan: paciente ve sus fotos" on storage.objects;
+create policy "nutriplan: paciente ve sus fotos" on storage.objects
+  for select using (bucket_id = 'fotos' and (storage.foldername(name))[1] = public.mi_paciente_id());
+
+drop policy if exists "nutriplan: paciente sube sus fotos" on storage.objects;
+create policy "nutriplan: paciente sube sus fotos" on storage.objects
+  for insert with check (bucket_id = 'fotos' and (storage.foldername(name))[1] = public.mi_paciente_id());
+
+drop policy if exists "nutriplan: paciente borra sus fotos" on storage.objects;
+create policy "nutriplan: paciente borra sus fotos" on storage.objects
+  for delete using (bucket_id = 'fotos' and (storage.foldername(name))[1] = public.mi_paciente_id());

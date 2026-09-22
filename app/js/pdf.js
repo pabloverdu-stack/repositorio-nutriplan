@@ -164,6 +164,96 @@ NP.pdf = (function () {
 </body></html>`;
   }
 
+  /* ---------- Menú por opciones ----------
+     El otro formato de plan: bloques de días, cada comida con varias opciones
+     entre las que el paciente elige. Misma plantilla de marca que la rejilla. */
+  function construirMenuHTML(plan, pac, opts) {
+    opts = opts || {};
+    const nutri = Object.assign({}, NUTRI, opts.nutri || {});
+    const bloques = (plan.bloques || []).filter((b) => (b.comidas || []).length);
+    const nComidas = bloques.reduce((s, b) => s + b.comidas.length, 0);
+    const nOpciones = bloques.reduce((s, b) =>
+      s + b.comidas.reduce((x, c) => x + (c.opciones || []).filter((o) => (o.alimentos || []).length || o.titulo).length, 0), 0);
+
+    const opcionHTML = (o, i) => {
+      const alimentos = (o.alimentos || []).map((a) => `<li>${esc(a)}</li>`).join("");
+      const prep = o.preparacion
+        ? `<div class="opt-prep"><b>Preparación:</b> ${esc(o.preparacion)}</div>` : "";
+      return `<div class="opt">
+        <div class="opt-h"><span class="opt-n">Opción ${i + 1}</span><span class="opt-t">${esc(o.titulo || "")}</span></div>
+        <ul class="opt-list">${alimentos}</ul>${prep}</div>`;
+    };
+
+    const bloquesHTML = bloques.map((b) => {
+      const comidas = b.comidas.map((c) => {
+        const ops = (c.opciones || []).filter((o) => (o.alimentos || []).length || o.titulo);
+        const libre = c.texto ? `<div class="free-text">${esc(c.texto)}</div>` : "";
+        if (!ops.length && !libre) return "";
+        return `<section class="meal">
+          <div class="meal-head">
+            <span class="meal-tag">${esc(c.nombre)}</span>
+            <h3>${ops.length ? ops.length + (ops.length > 1 ? " opciones" : " opción") : ""}</h3>
+          </div>
+          <div class="opts">${libre}${ops.map(opcionHTML).join("")}</div>
+        </section>`;
+      }).join("");
+      return `<div class="page day-page">
+        <div class="day-head">
+          <div class="day-title"><span class="day-dot"></span><h2>${esc(b.nombre)}</h2></div>
+          ${b.nota ? `<div class="day-sum"><div class="ds-m">${esc(b.nota)}</div></div>` : ""}
+        </div>${comidas}
+      </div>`;
+    }).join("");
+
+    const supHTML = (plan.suplementos || []).filter((s) => s.nombre).length
+      ? `<div class="page day-page">
+          <div class="day-head"><div class="day-title"><span class="day-dot"></span><h2>Suplementación</h2></div></div>
+          ${plan.suplementos.filter((s) => s.nombre).map((s) => `<section class="meal">
+            <div class="meal-head"><span class="meal-tag">${esc(s.nombre)}</span></div>
+            <div class="opts"><ul class="opt-list sup">${(s.lineas || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>
+          </section>`).join("")}
+        </div>`
+      : "";
+
+    const indice = bloques.map((b) =>
+      `<tr><th class="g-lbl">${esc(b.nombre)}</th><td>${b.comidas.map((c) =>
+        `<span class="ix">${esc(c.nombre)}${(c.opciones || []).length ? ` <em>(${c.opciones.length})</em>` : ""}</span>`).join("")}</td></tr>`).join("");
+
+    const pie = (nutri.nombre || nutri.contacto)
+      ? `<div class="cover-foot"><div><b>${esc(nutri.nombre)}</b>${nutri.titulo ? " · " + esc(nutri.titulo) : ""}</div><div>${esc(nutri.contacto)}</div></div>`
+      : "";
+
+    return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>${esc(plan.nombre)} · ${esc(pac.nombre)}</title><style>${CSS}${CSS_MENU}${CSS_SCREEN}</style></head><body>
+  <div class="page cover">
+    <div class="cover-band">
+      <div class="brand">
+        <div class="logo">&#9681;</div>
+        <div><div class="brand-name">${esc(NP.APP_NAME)}</div><div class="brand-sub">Programa nutricional personalizado</div></div>
+      </div>
+      <div class="cover-meta">
+        <div class="plan-name">${esc(plan.nombre)}</div>
+        <div class="pac">${esc(pac.nombre)}</div>
+        <div class="obj">${esc(pac.objetivo || "")}${pac.kcal_objetivo ? " · objetivo " + k(pac.kcal_objetivo) + " kcal/día" : ""}</div>
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><b>${bloques.length}</b><span>tipos de día</span></div>
+      <div class="kpi"><b>${nComidas}</b><span>comidas planificadas</span></div>
+      <div class="kpi"><b>${nOpciones}</b><span>opciones para elegir</span></div>
+      <div class="kpi"><b>${k(pac.kcal_objetivo || 0)}</b><span>objetivo diario</span></div>
+    </div>
+    <h2 class="sec-title">Tu programa de un vistazo</h2>
+    <table class="grid"><tbody>${indice}</tbody></table>
+    <div class="nota"><b>Cómo usar tu programa:</b> ${plan.nota
+      ? esc(plan.nota)
+      : "en cada comida tienes varias opciones: elige cada día la que te apetezca, respetando las " +
+        "cantidades. Las opciones de una misma comida son equivalentes entre sí."}</div>
+    ${pie}
+  </div>${bloquesHTML}${supHTML}
+</body></html>`;
+  }
+
   const CSS = `
 @page { size: A4; margin: 0; }
 * { box-sizing: border-box; }
@@ -258,12 +348,39 @@ h1,h2,h3,h4 { margin:0; font-weight:700; letter-spacing:-.01em; }
 .pasos li { margin-bottom:6px; padding-left:3px; }
 .pasos li::marker { color:#5fd0a6; font-weight:800; }
 `;
+  // Añadidos del menú por opciones (tarjetas de opción, texto suelto, índice)
+  const CSS_MENU = `
+.opts { padding:12px 15px; display:flex; flex-wrap:wrap; gap:10px; }
+.opt { flex:1 1 30%; min-width:170px; border:1px solid #232c38; border-radius:11px; background:#151b24;
+  padding:10px 12px; page-break-inside:avoid; }
+.opt-h { margin-bottom:7px; padding-bottom:6px; border-bottom:1px dashed #2f3a48; }
+.opt-n { display:block; font-size:7.2pt; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#5fd0a6; }
+.opt-t { font-size:9.6pt; font-weight:700; color:#fff; line-height:1.3; }
+.opt-list { list-style:none; margin:0; padding:0; font-size:8.8pt; color:#dde4ed; }
+.opt-list li { padding:2.5px 0 2.5px 11px; position:relative; }
+.opt-list li::before { content:""; position:absolute; left:0; top:9px; width:4px; height:4px;
+  border-radius:50%; background:#5fd0a6; }
+.opt-list.sup li { font-size:9.4pt; padding-top:3.5px; padding-bottom:3.5px; }
+.opt-prep { margin-top:7px; font-size:8.2pt; color:#b9c4d2; line-height:1.45; }
+.opt-prep b { color:#7ee0bb; }
+.free-text { flex:1 1 100%; background:#122b25; border:1px solid #2f5f4f; border-radius:10px;
+  padding:9px 12px; font-size:9.2pt; color:#cfe9df; }
+.meal-head h3 { font-size:9pt; color:#9aa7b8; font-weight:600; }
+.ix { display:inline-block; background:#1c2430; border:1px solid #2a3341; border-radius:20px;
+  padding:3px 9px; margin:2px 4px 2px 0; font-size:8pt; color:#e7ecf3; }
+.ix em { color:#5fd0a6; font-style:normal; font-weight:800; }
+`;
+
   // Solo para la ventana de vista previa/impresión (no se usa al generar el archivo)
   const CSS_SCREEN = `@media screen { body { padding:20px 0; } .page { margin:0 auto 16px; box-shadow:0 6px 30px rgba(0,0,0,.5); } }`;
 
+  /** La plantilla que toca según el tipo de plan: rejilla semanal o menú por opciones */
+  const construir = (plan, pac, opts) =>
+    (NP.esMenu && NP.esMenu(plan) ? construirMenuHTML : construirHTML)(plan, pac, opts);
+
   /** Abre el plan en una ventana lista para "Guardar como PDF" (máxima calidad, texto seleccionable). */
   function exportarPlan(plan, pac, opts) {
-    const html = construirHTML(plan, pac, opts);
+    const html = construir(plan, pac, opts);
     const w = window.open("", "_blank");
     if (!w) { NP.util.toast("Permite las ventanas emergentes para generar el PDF"); return null; }
     w.document.open(); w.document.write(html); w.document.close();
@@ -292,7 +409,7 @@ h1,h2,h3,h4 { margin:0; font-weight:700; letter-spacing:-.01em; }
   /** Genera el PDF y devuelve un Blob. */
   async function generarBlob(plan, pac, opts) {
     await cargarLib();
-    const html = construirHTML(plan, pac, opts);
+    const html = construir(plan, pac, opts);
     const doc = new DOMParser().parseFromString(html, "text/html");
     // IMPORTANTE: html2canvas solo captura elementos en el FLUJO normal del documento
     // (fuera de pantalla o con position absolute/fixed devuelve un PDF vacío).
@@ -314,7 +431,7 @@ h1,h2,h3,h4 { margin:0; font-weight:700; letter-spacing:-.01em; }
         image: { type: "jpeg", quality: 0.92 },
         html2canvas: { scale: 2, backgroundColor: "#0b0d12", useCORS: true, logging: false, windowWidth: 794 },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: true },
-        pagebreak: { mode: ["css", "legacy"], avoid: [".meal", ".day-head", ".kpi"] },
+        pagebreak: { mode: ["css", "legacy"], avoid: [".meal", ".day-head", ".kpi", ".opt"] },
       }).from(cont).toPdf().output("blob");
     } finally {
       cont.remove();
@@ -402,6 +519,6 @@ h1,h2,h3,h4 { margin:0; font-weight:700; letter-spacing:-.01em; }
     catch (e) { return false; }
   };
 
-  return { exportarPlan, construirHTML, comidaDe, comidasDe, generarBlob, enviarAlMovil,
+  return { exportarPlan, construirHTML, construirMenuHTML, comidaDe, comidasDe, generarBlob, enviarAlMovil,
            flujoEnviarAlMovil, nombreArchivo, puedeCompartirArchivos };
 })();

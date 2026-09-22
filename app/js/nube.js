@@ -20,7 +20,13 @@ NP.nube = (function () {
   let nutriNombre = "";    // nombre del nutricionista (lo necesita el paciente)
 
   // Copia en memoria de lo que este usuario puede ver
-  const C = { pacientes: [], planes: [], mensajes: [], propias: [], favoritas: [] };
+  const C = { pacientes: [], planes: [], mensajes: [], propias: [], favoritas: [], documentos: [], registros: [] };
+  // Almacenes de Storage; false si la base aún no tiene esa tabla (falta volver
+  // a ejecutar supabase/esquema.sql)
+  const BUCKET = "documentos";
+  const BUCKET_FOTOS = "fotos";
+  let docsListos = false;
+  let registrosListos = false;
 
   /* ---------- Utilidades ---------- */
   const uid = () => NP.util.uid();
@@ -47,6 +53,9 @@ NP.nube = (function () {
     if (/CODIGO_INVALIDO/.test(m)) return "Ese código de acceso no existe. Pídeselo a tu nutricionista.";
     if (/YA_TIENE_CUENTA/.test(m)) return "Este paciente ya tiene una cuenta. Entra con su email y contraseña.";
     if (/NO_AUTORIZADO/.test(m)) return "Ese paciente no es tuyo.";
+    if (/exceeded the maximum allowed size|Payload too large/i.test(m)) return "El PDF pesa demasiado (máximo 20 MB).";
+    if (/Bucket not found|documentos/i.test(m) && /not found|does not exist|schema cache/i.test(m))
+      return "Falta preparar la base de datos para los documentos: vuelve a ejecutar supabase/esquema.sql en Supabase.";
     if (/Failed to fetch|NetworkError/i.test(m)) return "Sin conexión con la base de datos. Revisa tu internet.";
     return m;
   }
@@ -62,14 +71,17 @@ NP.nube = (function () {
     return { id: p.id, nutri_id: p.nutriId, codigo_acceso: p.codigo_acceso || null, datos };
   }
 
-  const planApp = (f) => ({
+  // `datos` lleva todo lo del plan menos lo que ya va en columnas propias, así
+  // valen igual la rejilla semanal (comidas + dias) y el menú por opciones
+  // (tipo + bloques + suplementos) sin tocar la base de datos.
+  const planApp = (f) => Object.assign({ dias: {}, comidas: null }, f.datos, {
     id: f.id, pacienteId: f.paciente_id, nombre: f.nombre,
-    comidas: (f.datos && f.datos.comidas) || null, dias: (f.datos && f.datos.dias) || {},
   });
-  const planFila = (pl) => ({
-    id: pl.id, paciente_id: pl.pacienteId, nombre: pl.nombre || "Plan",
-    datos: { comidas: pl.comidas || null, dias: pl.dias || {} },
-  });
+  function planFila(pl) {
+    const datos = Object.assign({}, pl);
+    ["id", "pacienteId", "nombre"].forEach((k) => delete datos[k]);
+    return { id: pl.id, paciente_id: pl.pacienteId, nombre: pl.nombre || "Plan", datos };
+  }
 
   const msgApp = (f) => ({
     id: f.id, pacienteId: f.paciente_id, autor: f.autor, texto: f.texto,
@@ -79,6 +91,26 @@ NP.nube = (function () {
     id: m.id, paciente_id: m.pacienteId, autor: m.autor, texto: m.texto,
     canal: m.canal || "app", leido: !!m.leido, fecha: new Date(m.fecha).toISOString(),
   });
+
+  const docApp = (f) => ({
+    id: f.id, pacienteId: f.paciente_id, nutriId: f.nutri_id, titulo: f.titulo,
+    categoria: f.categoria, nota: f.nota || "", ruta: f.ruta, archivo: f.archivo,
+    tamano: f.tamano, visto: !!f.visto, fecha: new Date(f.fecha).getTime(),
+  });
+  const docFila = (d) => ({
+    id: d.id, paciente_id: d.pacienteId, nutri_id: d.nutriId, titulo: d.titulo,
+    categoria: d.categoria, nota: d.nota || "", ruta: d.ruta, archivo: d.archivo || null,
+    tamano: d.tamano || null, visto: !!d.visto, fecha: new Date(d.fecha).toISOString(),
+  });
+
+  const regApp = (f) => Object.assign({}, f.datos, {
+    id: f.id, pacienteId: f.paciente_id, tipo: f.tipo, fecha: f.fecha,
+  });
+  function regFila(r) {
+    const datos = Object.assign({}, r);
+    ["id", "pacienteId", "tipo", "fecha"].forEach((k) => delete datos[k]);
+    return { id: r.id, paciente_id: r.pacienteId, tipo: r.tipo, fecha: String(r.fecha || ""), datos };
+  }
 
   const propiaApp = (f) => Object.assign({}, f.datos, { id: f.id, propia: true });
   function propiaFila(r) {
@@ -162,12 +194,14 @@ NP.nube = (function () {
 
   /** Descarga de una vez todo lo que este usuario puede ver */
   async function cargarDatos() {
-    const [pac, pla, msg, pro, fav] = await Promise.all([
+    const [pac, pla, msg, pro, fav, doc, reg] = await Promise.all([
       sb.from("pacientes").select("*"),
       sb.from("planes").select("*"),
       sb.from("mensajes").select("*").order("fecha", { ascending: true }),
       sb.from("recetas_propias").select("*"),
       sb.from("favoritas").select("receta_id"),
+      sb.from("documentos").select("*"),
+      sb.from("registros").select("*"),
     ]);
     [pac, pla, msg, pro, fav].forEach((r) => { if (r.error) throw r.error; });
     C.pacientes = (pac.data || []).map(pacienteApp);
@@ -175,11 +209,20 @@ NP.nube = (function () {
     C.mensajes = (msg.data || []).map(msgApp);
     C.propias = (pro.data || []).map(propiaApp);
     C.favoritas = (fav.data || []).map((f) => f.receta_id);
+    // Si la base es de antes de existir los documentos, el resto de la app
+    // sigue funcionando y la sección avisa de que falta actualizarla.
+    docsListos = !doc.error;
+    if (doc.error) console.warn("[nube] documentos no disponibles:", doc.error.message);
+    C.documentos = (doc.data || []).map(docApp);
+    registrosListos = !reg.error;
+    if (reg.error) console.warn("[nube] registros no disponibles:", reg.error.message);
+    C.registros = (reg.data || []).map(regApp);
   }
 
   function limpiarMemoria() {
     usuario = null; nutriNombre = "";
     C.pacientes = []; C.planes = []; C.mensajes = []; C.propias = []; C.favoritas = [];
+    C.documentos = []; C.registros = [];
   }
 
   /* ================= NP.auth en modo nube ================= */
@@ -302,8 +345,16 @@ NP.nube = (function () {
       C.pacientes = C.pacientes.filter((p) => p.id !== id);
       C.planes = C.planes.filter((pl) => pl.pacienteId !== id);
       C.mensajes = C.mensajes.filter((m) => m.pacienteId !== id);
-      // La base borra en cascada los planes y mensajes de ese paciente
+      // La base borra en cascada los planes, mensajes y documentos de ese
+      // paciente; los PDF que solo eran suyos hay que quitarlos del almacén.
+      const rutas = new Set(C.documentos.filter((d) => d.pacienteId === id).map((d) => d.ruta));
+      C.documentos = C.documentos.filter((d) => d.pacienteId !== id);
+      const huerfanas = [...rutas].filter((r) => !C.documentos.some((d) => d.ruta === r));
+      const fotos = C.registros.filter((r) => r.pacienteId === id && r.ruta).map((r) => r.ruta);
+      C.registros = C.registros.filter((r) => r.pacienteId !== id);
       enviar(sb.from("pacientes").delete().eq("id", id), "el borrado del paciente");
+      if (huerfanas.length) enviar(sb.storage.from(BUCKET).remove(huerfanas), "el borrado de sus documentos");
+      if (fotos.length) enviar(sb.storage.from(BUCKET_FOTOS).remove(fotos), "el borrado de sus fotos");
     },
 
     adoptarHuerfanos: () => 0, // no aplica en la nube
@@ -406,6 +457,112 @@ NP.nube = (function () {
       return ids.length;
     },
     noLeidosNutri: () => C.pacientes.reduce((s, p) => s + storeNube.noLeidos(p.id, "nutri"), 0),
+
+    // ---- Documentos (PDF en Storage + una ficha por paciente) ----
+    docsListos: () => docsListos,
+    getDocumentos: () => C.documentos.slice(),
+    documentosDe: (pacienteId) => C.documentos
+      .filter((d) => d.pacienteId === pacienteId).sort((a, b) => b.fecha - a.fecha),
+    docsNuevos: (pacienteId) => C.documentos.filter((d) => d.pacienteId === pacienteId && !d.visto).length,
+
+    // Aquí sí se espera a la nube: el PDF tarda en subir y hay que saber si ha llegado
+    async subirDocumento(file, meta, pacienteIds) {
+      const ruta = usuario.id + "/" + uid() + ".pdf";
+      const { error: e1 } = await sb.storage.from(BUCKET).upload(ruta, file, { contentType: "application/pdf" });
+      if (e1) throw new Error(traducir(e1));
+      const fecha = Date.now();
+      const docs = pacienteIds.map((pid) => ({
+        id: uid(), pacienteId: pid, nutriId: usuario.id, titulo: meta.titulo,
+        categoria: meta.categoria, nota: meta.nota || "", ruta,
+        archivo: file.name, tamano: file.size, visto: false, fecha,
+      }));
+      const { error: e2 } = await sb.from("documentos").insert(docs.map(docFila));
+      if (e2) {
+        sb.storage.from(BUCKET).remove([ruta]); // que no quede el archivo suelto
+        throw new Error(traducir(e2));
+      }
+      C.documentos.push(...docs);
+      return docs;
+    },
+    async compartirDocumento(docId, pacienteIds) {
+      const base = C.documentos.find((d) => d.id === docId);
+      if (!base) throw new Error("Ese documento ya no existe.");
+      const fecha = Date.now();
+      const docs = pacienteIds.map((pid) =>
+        Object.assign({}, base, { id: uid(), pacienteId: pid, visto: false, fecha }));
+      const { error } = await sb.from("documentos").insert(docs.map(docFila));
+      if (error) throw new Error(traducir(error));
+      C.documentos.push(...docs);
+      return docs;
+    },
+    /** Enlace temporal (1 h) al PDF; con opts.descargar = nombre, lo baja en vez de abrirlo */
+    async urlDocumento(doc, opts) {
+      const o = opts && opts.descargar ? { download: opts.descargar } : undefined;
+      const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(doc.ruta, 3600, o);
+      if (error) throw new Error(traducir(error));
+      return data.signedUrl;
+    },
+    deleteDocumento(id) {
+      const d = C.documentos.find((x) => x.id === id);
+      if (!d) return;
+      C.documentos = C.documentos.filter((x) => x.id !== id);
+      enviar(sb.from("documentos").delete().eq("id", id), "el borrado del documento");
+      // El archivo solo se borra si ningún otro paciente lo tiene
+      if (!C.documentos.some((x) => x.ruta === d.ruta))
+        enviar(sb.storage.from(BUCKET).remove([d.ruta]), "el borrado del archivo");
+    },
+    marcarDocumentoVisto(id) {
+      const d = C.documentos.find((x) => x.id === id);
+      if (!d || d.visto) return;
+      d.visto = true;
+      enviar(sb.rpc("marcar_documento_visto", { p_id: id }), "el documento visto");
+    },
+
+    // ---- Registros (revisiones, fotos, rutinas, actividad, citas, alternativas) ----
+    registrosListos: () => registrosListos,
+    getRegistros: () => C.registros.slice(),
+    registrosDe: (pacienteId, tipo) => C.registros
+      .filter((r) => r.pacienteId === pacienteId && (!tipo || r.tipo === tipo))
+      .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)) || (a.creado || 0) - (b.creado || 0)),
+    getRegistro: (id) => C.registros.find((r) => r.id === id) || null,
+
+    saveRegistro(r) {
+      if (!r.id) { r.id = uid(); r.creado = r.creado || Date.now(); C.registros.push(r); }
+      else if (!C.registros.some((x) => x.id === r.id)) C.registros.push(r);
+      enviar(sb.from("registros").upsert(regFila(r)), "el registro del paciente");
+      return r;
+    },
+    deleteRegistro(id) {
+      const r = C.registros.find((x) => x.id === id);
+      if (!r) return;
+      C.registros = C.registros.filter((x) => x.id !== id);
+      enviar(sb.from("registros").delete().eq("id", id), "el borrado del registro");
+      if (r.ruta && !C.registros.some((x) => x.ruta === r.ruta))
+        enviar(sb.storage.from(BUCKET_FOTOS).remove([r.ruta]), "el borrado de la foto");
+    },
+
+    // Aquí sí se espera a la nube: la foto tarda en subir y hay que saber si ha llegado
+    async subirFoto(file, meta) {
+      const ext = (/\.(\w+)$/.exec(file.name) || [, "jpg"])[1].toLowerCase();
+      const ruta = meta.pacienteId + "/" + uid() + "." + ext;
+      const { error: e1 } = await sb.storage.from(BUCKET_FOTOS).upload(ruta, file, { contentType: file.type || "image/jpeg" });
+      if (e1) throw new Error(traducir(e1));
+      const reg = Object.assign({
+        id: uid(), tipo: "foto", creado: Date.now(), ruta, archivo: file.name, tamano: file.size,
+      }, meta);
+      const { error: e2 } = await sb.from("registros").insert(regFila(reg));
+      if (e2) {
+        sb.storage.from(BUCKET_FOTOS).remove([ruta]); // que no quede el archivo suelto
+        throw new Error(traducir(e2));
+      }
+      C.registros.push(reg);
+      return reg;
+    },
+    async urlFoto(reg) {
+      const { data, error } = await sb.storage.from(BUCKET_FOTOS).createSignedUrl(reg.ruta, 3600);
+      if (error) throw new Error(traducir(error));
+      return data.signedUrl;
+    },
   };
 
   // Código de acceso: sin I, O, 0 ni 1, que se confunden al dictarlos
@@ -462,6 +619,13 @@ NP.nube = (function () {
     if (favoritas.length) {
       const { error } = await sb.from("favoritas")
         .upsert(favoritas.map((rid) => ({ nutri_id: usuario.id, receta_id: rid })));
+      if (error) throw new Error(traducir(error));
+    }
+    // Las fotos se quedan fuera: su archivo está en este navegador, no en la nube.
+    const filasReg = leerLocal("np_registros")
+      .filter((r) => idsPac.has(r.pacienteId) && r.tipo !== "foto").map(regFila);
+    if (filasReg.length) {
+      const { error } = await sb.from("registros").upsert(filasReg);
       if (error) throw new Error(traducir(error));
     }
 

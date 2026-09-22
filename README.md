@@ -11,17 +11,48 @@ Al abrir la app se elige el rol:
 ### 🥗 Nutricionista
 Se registra con nombre, email y contraseña. Puede:
 - crear y editar pacientes (datos, calculadora de calorías, patologías, notas);
-- montar planes semanales con el recetario (3.100+ recetas) y el constructor por ingredientes;
+- montar planes de dos formas, la que prefiera para cada paciente:
+  - **semana completa**: la rejilla de 7 días con el recetario (3.100+ recetas) y el constructor
+    por ingredientes, con sus kcal y macros calculados;
+  - **menú por opciones**: bloques de días («días de entrenamiento», «días de descanso»...) y,
+    en cada comida, varias opciones equivalentes entre las que el paciente elige cada día,
+    con sus alimentos y gramos, la preparación y la suplementación;
 - ver la ficha nutricional completa del plan (macros, minerales, vitaminas frente a las DRI);
 - exportar el plan a PDF;
+- enviarle PDF (rutinas de entrenamiento, ideas de recetas, guías...) desde
+  **📂 Documentos** en la ficha del paciente; el mismo PDF se puede mandar a varios
+  pacientes a la vez y se ve quién lo ha abierto ya;
+- llevar el seguimiento en **📈 Revisiones**: peso, los **7 pliegues cutáneos** (la app
+  calcula sola el % de grasa con Jackson-Pollock + Siri), perímetros, masa grasa y magra,
+  gráfica de progresión de peso y grasa, y **fotos** de cada revisión para compararlas
+  lado a lado;
+- montar su **🏋️ entrenamiento**: rutina por días con sus ejercicios, series,
+  repeticiones, peso y descanso; el paciente la ve en su móvil y apunta lo que levanta,
+  y aquí se ve su progresión de cargas ejercicio por ejercicio;
+- poner **🗓️ citas y revisiones** en la agenda (calendario mensual, con aviso automático
+  al paciente por el chat);
+- dejarle **🥗 recetas y alternativas**: por qué puede cambiar cada alimento cuando se
+  canse de algo del plan, y recetas del recetario recomendadas;
 - hablar con cada paciente: dentro de la app, por WhatsApp o por email.
 
 Cada nutricionista ve **solo sus propios pacientes**.
 
 ### 🙋 Paciente
 Entra con su email y contraseña. Ve:
-- **Mi menú** — sus comidas de hoy y la semana completa; al tocar un plato salen los
-  ingredientes con sus gramos, la elaboración y la información nutricional. Solo lectura;
+- **Mi menú** — según cómo se lo haya montado su nutricionista: sus comidas de hoy y la semana
+  completa (al tocar un plato salen los ingredientes con sus gramos, la elaboración y la
+  información nutricional), o las opciones de cada comida para elegir cada día. Solo lectura,
+  y con botón para descargarlo en PDF;
+- **Mi entreno** — su rutina día a día y el botón para registrar cada sesión (repeticiones
+  y kilos de cada serie, con lo que hizo la vez anterior ya puesto), más su progresión;
+- **Mi progreso** — gráfica de peso y grasa corporal, historial de revisiones, sus fotos
+  y el botón para anotar su peso;
+- **Mis recetas** — las alternativas de alimentos y las recetas que le recomienda su
+  nutricionista;
+- **Mi agenda** — su próxima cita y el calendario del mes;
+- **Mis documentos** — los PDF que le manda su nutricionista, ordenados por tipo
+  (entrenamiento, recetas, guías, otros), con aviso de los nuevos; se abren o descargan
+  desde el móvil;
 - **Mi nutricionista** — chat con su profesional;
 - **Mi perfil** — sus datos y objetivo, con opción de actualizar su peso.
 
@@ -64,15 +95,23 @@ app/
     store.js          persistencia y separación de datos por nutricionista
     auth.js           cuentas, sesión y códigos de acceso
     calorias.js       Harris-Benedict, actividad y macros
+    antropo.js        pliegues (Jackson-Pollock 7) y composición corporal
+    grafica.js        gráficas de líneas en SVG (progresión)
     dri.js            ingestas de referencia
     pdf.js            exportación del plan a PDF
     views/
       acceso.js       pantalla de entrada (elegir rol, login, registro)
       pacientes.js    lista y ficha del paciente
       plan.js         editor del plan semanal
+      menu.js         editor y vista del menú por opciones
       recetas.js      explorador de recetas y componentes compartidos
       constructor.js  constructor por ingredientes
       mensajes.js     mensajería del nutricionista
+      documentos.js   PDF del nutricionista al paciente (envío y «Mis documentos»)
+      revisiones.js   revisiones, pliegues, gráfica de progresión y fotos
+      entreno.js      rutinas de entrenamiento y registro de actividad
+      agenda.js       calendario de citas y revisiones
+      alternativas.js recetas sanas y cambios de alimentos por paciente
       cliente.js      vistas del paciente (menú, chat, perfil)
     app.js            router y control de acceso
 ```
