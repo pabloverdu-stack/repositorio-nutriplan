@@ -105,6 +105,11 @@ NP.views.acceso = function (root) {
 
     const form = el("form", { class: "auth-form", onsubmit: enviar }, campos.concat([error, btn]));
 
+    const olvide = registro ? null : el("button", {
+      class: "btn btn-ghost", type: "button", style: "margin-top:8px;width:100%;justify-content:center;font-size:12.5px",
+      onclick: () => pintarRecuperar(fEmail.value),
+    }, "¿Has olvidado tu contraseña?");
+
     const cambiarModo = el("button", {
       class: "btn btn-ghost", type: "button",
       onclick: () => { modo = registro ? "login" : "registro"; pintarForm(); },
@@ -118,6 +123,7 @@ NP.views.acceso = function (root) {
         ? (esNutri ? "Crea tu cuenta de nutricionista" : "Crea tu cuenta de paciente")
         : (esNutri ? "Entrar como nutricionista" : "Entrar como paciente")),
       form,
+      olvide,
       el("div", { class: "auth-acciones" }, [
         cambiarModo,
         el("button", { class: "btn btn-ghost", type: "button", onclick: () => { rol = null; pintarEleccion(); } }, "← Cambiar de rol"),
@@ -132,6 +138,93 @@ NP.views.acceso = function (root) {
     (registro && esNutri ? fNombre : registro && !esNutri ? fCodigo : fEmail).focus();
   }
 
+  /* ---------- ¿Has olvidado tu contraseña? ---------- */
+  function pintarRecuperar(emailPrevio) {
+    const esNutri = rol === "nutri";
+    const enNube = !!(NP.nube && NP.nube.activo);
+    const volver = el("button", { class: "btn btn-ghost", type: "button", onclick: () => { modo = "login"; pintarForm(); } }, "← Volver a entrar");
+    let contenido;
+
+    if (enNube) {
+      const fEmail = el("input", { type: "email", placeholder: "tucorreo@email.com", autocomplete: "email", value: emailPrevio || "" });
+      const error = el("div", { class: "auth-error", hidden: true });
+      const btn = el("button", { class: "btn btn-primary grande", type: "submit" }, "Enviarme el enlace");
+      const form = el("form", {
+        class: "auth-form",
+        onsubmit: async (e) => {
+          e.preventDefault();
+          error.hidden = true; btn.disabled = true;
+          try {
+            await NP.auth.recuperarPass(fEmail.value);
+            form.replaceWith(el("div", { class: "auth-pie", style: "font-size:13px;color:var(--text)" }, [
+              "✉️ Si hay una cuenta con ", el("b", {}, fEmail.value.trim()),
+              ", te llegará un correo con un enlace para crear una contraseña nueva. Revisa también la carpeta de spam.",
+            ]));
+          } catch (err) {
+            error.textContent = err.message || "No se ha podido enviar el correo.";
+            error.hidden = false; btn.disabled = false;
+          }
+        },
+      }, [
+        el("p", { class: "small muted", style: "margin:0 0 14px" }, "Escribe el email de tu cuenta y te mandaremos un enlace para poner una contraseña nueva."),
+        campo("Email", fEmail), error, btn,
+      ]);
+      contenido = form;
+      setTimeout(() => fEmail.focus(), 0);
+    } else {
+      // Modo local: no hay servidor que pueda mandar correos
+      contenido = el("div", { class: "auth-pie", style: "font-size:13px;color:var(--text)" }, esNutri
+        ? ["Los datos se guardan solo en este navegador, así que no hay forma de enviarte un correo de recuperación. ",
+           "Si activas el modo nube (config.js con Supabase), podrás recuperarla por email."]
+        : ["Pídele a tu nutricionista que te ", el("b", {}, "reinicie el acceso"),
+           " desde tu ficha. Te dará un código nuevo y podrás crear tu cuenta otra vez con «Es mi primera vez»."]);
+    }
+
+    pantalla.innerHTML = "";
+    pantalla.appendChild(el("div", { class: "auth-box" }, [
+      marca(),
+      rol ? el("div", { class: "auth-rol-pill" }, esNutri ? "🥗 Nutricionista" : "🙋 Paciente") : null,
+      el("h2", { class: "auth-tit" }, "Recuperar contraseña"),
+      contenido,
+      el("div", { class: "auth-acciones" }, [volver]),
+    ]));
+  }
+
+  /* ---------- Llegada desde el enlace del correo: poner la nueva ---------- */
+  function pintarNuevaPass() {
+    const f1 = el("input", { type: "password", placeholder: "Mínimo 6 caracteres", autocomplete: "new-password" });
+    const f2 = el("input", { type: "password", placeholder: "Repite la contraseña", autocomplete: "new-password" });
+    const error = el("div", { class: "auth-error", hidden: true });
+    const btn = el("button", { class: "btn btn-primary grande", type: "submit" }, "Guardar y entrar");
+    const form = el("form", {
+      class: "auth-form",
+      onsubmit: async (e) => {
+        e.preventDefault();
+        error.hidden = true; btn.disabled = true;
+        try {
+          if (f1.value !== f2.value) throw new Error("Las dos contraseñas no coinciden.");
+          const u = await NP.auth.nuevaPass(f1.value);
+          toast("Contraseña cambiada ✓ Hola, " + (u.nombre || "").split(" ")[0]);
+          NP.app.entrarEnLaApp();
+        } catch (err) {
+          error.textContent = err.message || "No se ha podido cambiar.";
+          error.hidden = false; btn.disabled = false;
+        }
+      },
+    }, [campo("Nueva contraseña", f1), campo("Repetir contraseña", f2), error, btn]);
+
+    pantalla.innerHTML = "";
+    pantalla.appendChild(el("div", { class: "auth-box" }, [
+      marca(),
+      el("h2", { class: "auth-tit" }, "Crea tu nueva contraseña"),
+      form,
+      el("div", { class: "auth-acciones" }, [
+        el("button", { class: "btn btn-ghost", type: "button", onclick: () => { NP.auth.cancelarRecuperacion(); pintarEleccion(); } }, "Cancelar"),
+      ]),
+    ]));
+    f1.focus();
+  }
+
   function campo(label, input, ayuda) {
     return el("label", { class: "field" }, [
       el("span", {}, label),
@@ -140,5 +233,6 @@ NP.views.acceso = function (root) {
     ]);
   }
 
-  pintarEleccion();
+  if (NP.auth.enRecuperacion && NP.auth.enRecuperacion()) pintarNuevaPass();
+  else pintarEleccion();
 };
