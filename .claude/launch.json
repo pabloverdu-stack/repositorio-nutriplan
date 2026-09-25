@@ -4,14 +4,38 @@
     {
       "name": "nutriplan",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8123", "--directory", "app"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8123",
+        "--directory",
+        "app"
+      ],
       "port": 8123
     },
     {
       "name": "nutriplan-2",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8124", "--directory", "app"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8124",
+        "--directory",
+        "app"
+      ],
       "port": 8124
+    },
+    {
+      "name": "nutriplan-vercel",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8126",
+        "--directory",
+        "app"
+      ],
+      "port": 8126
     }
   ]
 }

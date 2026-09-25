@@ -100,5 +100,7 @@ NP.data = (function () {
     get recetas() { return recetas; },
     get porTipo() { return porTipo; },
     get catalogo() { return catalogo; },
+    /** Alimentos sin duplicados: [{f_id, nombre, nombre_norm}] */
+    get alimentos() { return catalogoList; },
   };
 })();
