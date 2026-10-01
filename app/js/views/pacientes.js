@@ -58,7 +58,7 @@ NP.views.pacientes = (function () {
       res.appendChild(el("div", { class: "kpis" }, [
         el("div", { class: "kpi" }, [el("div", { class: "v", style: "font-size:19px" }, fmt(r.tmb)), el("div", { class: "l" }, "TMB basal")]),
         el("div", { class: "kpi" }, [el("div", { class: "v", style: "font-size:19px" }, fmt(r.get)), el("div", { class: "l" }, "Gasto total ×" + r.factor)]),
-        el("div", { class: "kpi", style: "border-color:rgba(95,208,166,.45);background:rgba(95,208,166,.10)" }, [
+        el("div", { class: "kpi", style: "border-color:color-mix(in srgb, var(--accent) 45%, transparent);background:color-mix(in srgb, var(--accent) 10%, transparent)" }, [
           el("div", { class: "v", style: "font-size:24px" }, fmt(r.objetivo)), el("div", { class: "l" }, "Objetivo · " + pct)]),
       ]));
       res.appendChild(el("div", { class: "small muted", style: "margin:12px 0 6px" }, "Reparto de macros orientativo:"));
@@ -189,6 +189,11 @@ NP.views.pacientes = (function () {
     const m = modal({
       title: existing ? "Editar paciente" : "Nuevo paciente", body, wide: true,
       footer: [
+        existing ? el("button", { class: "btn btn-danger", style: "margin-right:auto", onclick: () => {
+          if (!confirm("¿Eliminar a «" + existing.nombre + "»?\n\nSe borrarán también sus planes, mensajes, documentos, revisiones y su acceso. No se puede deshacer.")) return;
+          NP.store.deletePaciente(existing.id);
+          m.close(); toast("Paciente eliminado"); NP.app.go("#/pacientes");
+        } }, "🗑 Eliminar paciente") : null,
         el("button", { class: "btn btn-ghost", onclick: () => m.close() }, "Cancelar"),
         el("button", {
           class: "btn btn-primary", onclick: () => {

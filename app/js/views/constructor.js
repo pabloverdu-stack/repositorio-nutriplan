@@ -31,10 +31,6 @@ NP.views.constructor = function (view) {
   }
 
   // ---- panel derecho: receta en construcción ----
-  const nombreInp = el("input", { placeholder: "Nombre de la receta (ej. Arroz con pollo y ensalada)" });
-  const tipoSel = el("select", {}, [
-    ["comida_cena", "Comida / Cena"], ["desayuno", "Desayuno"], ["merienda", "Merienda"],
-  ].map(([v, l]) => el("option", { value: v }, l)));
   const ingWrap = el("div", {});
   const totalsWrap = el("div", {});
 
@@ -75,20 +71,54 @@ NP.views.constructor = function (view) {
   }
   const kpi = (v, l) => el("div", { class: "kpi" }, [el("div", { class: "v" }, v), el("div", { class: "l" }, l)]);
 
-  function guardar() {
-    if (!nombreInp.value.trim()) { toast("Ponle nombre a la receta"); return; }
+  // Botón "Guardar receta nueva": abre una ventana para ponerle nombre y tipo
+  function pedirNombre() {
     if (!ings.length) { toast("Añade al menos un alimento"); return; }
+    const nombreInp = el("input", { placeholder: "Ej. Arroz con pollo y ensalada" });
+    const tipoSel = el("select", {}, [
+      ["comida_cena", "Comida / Cena"], ["desayuno", "Desayuno"], ["merienda", "Merienda"],
+    ].map(([v, l]) => el("option", { value: v }, l)));
+    const n = calcNut();
+    const ok = () => {
+      const nombre = nombreInp.value.trim();
+      if (!nombre) { toast("Ponle nombre a la receta"); nombreInp.focus(); return; }
+      guardar(nombre, tipoSel.value);
+      m.close();
+    };
+    nombreInp.addEventListener("keydown", (e) => { if (e.key === "Enter") ok(); });
+    const m = NP.util.modal({
+      title: "Guardar receta nueva",
+      body: el("div", {}, [
+        el("label", { class: "field" }, [el("span", {}, "Nombre de la receta"), nombreInp]),
+        el("label", { class: "field" }, [el("span", {}, "Tipo de comida"), tipoSel]),
+        el("div", { class: "small muted" }, `${ings.length} alimento(s) · ${fmt(n.energia_kcal)} kcal · ` +
+          `P ${fmt(n.proteinas_g, 1)} g / H ${fmt(n.hidratos_g, 1)} g / G ${fmt(n.grasas_g, 1)} g`),
+      ]),
+      footer: [
+        el("button", { class: "btn btn-ghost", onclick: () => m.close() }, "Cancelar"),
+        el("button", { class: "btn btn-primary", onclick: ok }, "💾 Guardar receta"),
+      ],
+    });
+    setTimeout(() => nombreInp.focus(), 60);
+  }
+
+  function guardar(nombre, tipo) {
     const n = calcNut();
     const receta = {
       id: editId || undefined, propia: true,
-      nombre: nombreInp.value.trim(), tipo: tipoSel.value, dificultad: "facil", tiempo_min: 10, raciones: 1,
+      nombre, tipo, dificultad: "facil", tiempo_min: 10, raciones: 1,
       ingredientes: ings.map((i) => ({ f_id: i.f_id, nombre: i.nombre, gramos: i.g, casera: "", bedca_nombre: i.nombre })),
       elaboracion: ["Receta creada por ingredientes simples.", "Pesa cada alimento y combínalos."],
       nutricion: n, nutrientes_incompletos: [],
     };
     NP.store.savePropia(receta);
-    toast("Receta guardada ✓  (ya disponible en Recetas y en los planes)");
-    ings = []; nombreInp.value = ""; editId = null; render(); renderPropias();
+    toast("Receta «" + nombre + "» guardada ✓  (ya disponible en Recetas y en los planes)");
+    nuevaReceta(); renderPropias();
+  }
+
+  // Empieza una receta desde cero (vacía la lista de alimentos)
+  function nuevaReceta() {
+    ings = []; editId = null; search.value = ""; results.hidden = true; render();
   }
 
   // lista de recetas propias existentes
@@ -115,15 +145,20 @@ NP.views.constructor = function (view) {
     el("div", { class: "small muted", style: "margin-top:10px" }, "Base BEDCA: macros y micros por 100 g."),
   ]);
   const right = el("div", { class: "panel" }, [
-    el("label", { class: "field" }, [el("span", {}, "Nombre de la receta"), nombreInp]),
-    el("label", { class: "field" }, [el("span", {}, "Tipo de comida"), tipoSel]),
+    el("div", { class: "toolbar", style: "margin-bottom:6px" }, [
+      el("h4", { class: "grow", style: "margin:0" }, "Receta en construcción"),
+      el("button", { class: "btn btn-sm", title: "Vaciar y empezar una receta desde cero", onclick: () => {
+        if (ings.length && !confirm("¿Empezar una receta nueva? Se quitarán los alimentos añadidos.")) return;
+        nuevaReceta(); search.focus();
+      } }, "＋ Nueva receta"),
+    ]),
     el("h4", { style: "margin:6px 0 4px" }, "Ingredientes"),
     ingWrap,
+    el("div", { style: "margin-top:12px;display:flex;justify-content:flex-end" }, [
+      el("button", { class: "btn btn-primary", onclick: pedirNombre }, "💾 Guardar receta nueva"),
+    ]),
     el("hr", { style: "border:none;border-top:1px solid var(--line-soft);margin:14px 0" }),
     totalsWrap,
-    el("div", { style: "margin-top:16px;display:flex;justify-content:flex-end" }, [
-      el("button", { class: "btn btn-primary", onclick: guardar }, "💾 Guardar receta"),
-    ]),
   ]);
 
   const cols = el("div", { class: "row", style: "align-items:flex-start" }, [

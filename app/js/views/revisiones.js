@@ -604,7 +604,7 @@ NP.views.revisiones = (function () {
   ]);
   const kpiAcento = (l, v) => {
     const n = kpi(l, v);
-    n.style.cssText = "border-color:rgba(95,208,166,.45);background:rgba(95,208,166,.10)";
+    n.style.cssText = "border-color:color-mix(in srgb, var(--accent) 45%, transparent);background:color-mix(in srgb, var(--accent) 10%, transparent)";
     return n;
   };
 
