@@ -1,4 +1,4 @@
-# NutriPlan
+# Nutrefuerte
 
 Aplicación web para planificar menús de nutrición y hacer seguimiento de pacientes.
 Funciona en local, sin instalar nada: se abre con **`Abrir NutriPlan.bat`** (necesita Python)

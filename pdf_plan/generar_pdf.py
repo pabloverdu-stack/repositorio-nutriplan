@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Generador del PDF del plan semanal (diseño de marca NutriPlan).
+"""Generador del PDF del plan semanal (diseño de marca Nutrefuerte).
 Uso:  python pdf_plan/generar_pdf.py
 Genera pdf_plan/plan.html y pdf_plan/plan.pdf (vía Chrome headless).
 
@@ -12,7 +12,7 @@ import json, os, subprocess, shutil, sys
 BASE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(BASE)
 
-MARCA = "NutriPlan"
+MARCA = "Nutrefuerte"
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
 DIAS = [("lunes", "Lunes"), ("martes", "Martes"), ("miercoles", "Miércoles"), ("jueves", "Jueves"),

@@ -10,7 +10,7 @@ rem Nos situamos en la carpeta donde esta este .bat,
 rem sin importar desde donde se abra
 cd /d "%~dp0"
 
-title NutriPlan - servidor local
+title Nutrefuerte - servidor local
 echo ==========================================
 echo    N u t r i P l a n
 echo ==========================================

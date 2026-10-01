@@ -1,5 +1,5 @@
 -- ============================================================
---  NutriPlan · esquema de la base de datos (Supabase / PostgreSQL)
+--  Nutrefuerte · esquema de la base de datos (Supabase / PostgreSQL)
 --  ------------------------------------------------------------
 --  Cómo usarlo: en tu proyecto de Supabase abre el "SQL Editor",
 --  pega TODO este archivo y pulsa "Run".

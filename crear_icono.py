@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Genera el icono de NutriPlan (nutriplan.ico) con los colores de la app.
+"""Genera el icono de Nutrefuerte (nutriplan.ico) con los colores de la app.
 Logo: cuadrado redondeado verde menta + simbolo (circulo mitad relleno), como en la app.
 Uso: python crear_icono.py
 """

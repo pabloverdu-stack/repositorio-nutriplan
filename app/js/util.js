@@ -1,6 +1,6 @@
 /* util.js — namespace global y helpers de UI */
 window.NP = window.NP || {};
-NP.APP_NAME = "NutriPlan"; // <- cambia aquí el nombre de la marca
+NP.APP_NAME = "Nutrefuerte"; // <- cambia aquí el nombre de la marca
 
 NP.util = (function () {
   const el = (tag, attrs = {}, children = []) => {
