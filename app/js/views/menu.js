@@ -59,6 +59,7 @@ NP.menuATexto = function (plan, pac) {
 NP.views.menu = (function () {
   const { el, modal, toast, fmt } = NP.util;
   const CM = NP.calcMenu;
+  const sinAc = NP.util.sinAcentos;
   const MAC = [["kcal", "kcal", ""], ["p", "P", " g"], ["g", "G", " g"], ["h", "H", " g"]];
   /** «520 kcal · P 32 · G 14 · H 60» */
   const textoMacros = (n) => fmt(n.kcal) + " kcal · P " + fmt(n.p) + " · G " + fmt(n.g) + " · H " + fmt(n.h);
@@ -244,7 +245,10 @@ NP.views.menu = (function () {
     if (!plan || !NP.esMenu(plan)) { NP.app.go("#/pacientes"); return; }
     const pac = NP.store.getPaciente(plan.pacienteId);
     NP.app.setTitle(plan.nombre + (pac ? " · " + pac.nombre : ""));
-    const guardar = () => NP.store.savePlan(plan);
+    // No hay botón de guardar: todo se guarda solo, y este aviso lo va diciendo
+    const estadoGuardado = el("span", { class: "small muted", style: "flex:0 0 auto", title: "Los cambios se guardan solos" }, "✓ Guardado");
+    const guardar = () => { NP.store.savePlan(plan); estadoGuardado.textContent = "✓ Guardado"; };
+    const guardarAlEscribir = NP.util.debounce(guardar, 600);
     plan.bloques = plan.bloques || [];
     plan.suplementos = plan.suplementos || [];
     plan.enlaces = plan.enlaces || {};
@@ -326,16 +330,17 @@ NP.views.menu = (function () {
       el("button", { class: "btn", style: "flex:0 0 auto", onclick: () => {
         guardar(); NP.pdf.exportarPlan(plan, pac || { nombre: "" });
       } }, "📄 PDF"),
-      el("button", { class: "btn btn-primary", style: "flex:0 0 auto", onclick: () => { guardar(); toast("Menú guardado ✓"); } }, "Guardar"),
+      estadoGuardado,
     ].filter(Boolean)));
 
     const cuerpo = el("div", { class: "mnu" });
     view.appendChild(cuerpo);
 
-    /** Campo que guarda solo al salir, para no repintar mientras se escribe */
+    /** Campo que se guarda solo mientras se escribe (sin repintar, para no perder el cursor) */
     function campo(attrs, onSet, multi) {
       const n = el(multi ? "textarea" : "input", attrs, multi ? [attrs.value || ""] : []);
       if (multi) n.removeAttribute("value");
+      n.addEventListener("input", () => { onSet(n.value); estadoGuardado.textContent = "Guardando…"; guardarAlEscribir(); });
       n.addEventListener("change", () => { onSet(n.value); guardar(); });
       return n;
     }
@@ -855,6 +860,8 @@ NP.views.menu = (function () {
         el("button", { class: "btn btn-sm", type: "button", onclick: abrirBuscador }, "＋ Añadir alimento"),
         el("button", { class: "btn btn-sm", type: "button", title: "Pone el nombre, los alimentos y los gramos de una receta, en el tamaño que elijas",
           onclick: () => recetaEnOpcion(op) }, "🍽️ Poner una receta"),
+        el("button", { class: "btn btn-sm", type: "button", title: "Guarda estos alimentos y gramos como receta tuya, para reutilizarla en otros menús y planes",
+          onclick: () => guardarComoReceta(c, op) }, "💾 Guardar en mis recetas"),
         vivo("span", {}, (n) => {
           const o = objC();
           const t = CM.calcularOpcion(op).n;
@@ -910,6 +917,50 @@ NP.views.menu = (function () {
           campo({ rows: 2, value: op.preparacion || "", placeholder: "Cómo se hace, si hace falta explicarlo" },
             (v) => { op.preparacion = v.trim(); }, true)]) : null,
       ]);
+    }
+
+    /** Guarda la opción como receta propia (aparece en Recetas → Mis recetas) */
+    function guardarComoReceta(c, op) {
+      const items = (op.items || []).filter((it) => it.fid && it.g > 0 && !it.libre);
+      if (!items.length) { toast("Añade primero algún alimento con sus gramos"); return; }
+      const nom = sinAc(c.nombre || "");
+      const tipoIni = /desayuno|levantarse/.test(nom) ? "desayuno"
+        : /merienda|media manana|entren|dormir/.test(nom) ? "merienda" : "comida_cena";
+      const fNom = el("input", { value: op.titulo || "", placeholder: "Ej. Arroz con pollo y ensalada" });
+      const fTipo = el("select", {}, [
+        ["comida_cena", "Comida / Cena"], ["desayuno", "Desayuno"], ["merienda", "Merienda"],
+      ].map(([v, l]) => el("option", v === tipoIni ? { value: v, selected: true } : { value: v }, l)));
+      const nut = NP.nutri.sumIngredientes(items.map((it) => ({ f_id: it.fid, g: it.g })), NP.data.catalogo);
+      const ok = () => {
+        const nombre = fNom.value.trim();
+        if (!nombre) { toast("Ponle nombre a la receta"); fNom.focus(); return; }
+        const ya = NP.store.getPropias().find((r) => sinAc(r.nombre) === sinAc(nombre));
+        if (ya && !confirm("Ya tienes una receta llamada «" + ya.nombre + "». ¿Sustituirla por esta?")) return;
+        NP.store.savePropia({
+          id: ya ? ya.id : undefined, propia: true,
+          nombre, tipo: fTipo.value, dificultad: "facil", tiempo_min: 10, raciones: 1,
+          ingredientes: items.map((it) => ({ f_id: it.fid, nombre: it.nombre, gramos: it.g, casera: it.casera || "", bedca_nombre: it.nombre })),
+          elaboracion: op.preparacion ? [op.preparacion] : ["Pesa cada alimento y combínalos."],
+          nutricion: nut, nutrientes_incompletos: [],
+        });
+        if (!op.titulo) { op.titulo = nombre; guardar(); pintar(); }
+        m.close(); toast("«" + nombre + "» guardada en Mis recetas ✓");
+      };
+      fNom.addEventListener("keydown", (e) => { if (e.key === "Enter") ok(); });
+      const m = modal({
+        title: "Guardar en mis recetas",
+        body: el("div", {}, [
+          el("label", { class: "field" }, [el("span", {}, "Nombre de la receta"), fNom]),
+          el("label", { class: "field" }, [el("span", {}, "Tipo de comida"), fTipo]),
+          el("div", { class: "small muted" }, items.length + " alimento(s) · " + fmt(nut.energia_kcal) + " kcal · P " +
+            fmt(nut.proteinas_g, 1) + " g / H " + fmt(nut.hidratos_g, 1) + " g / G " + fmt(nut.grasas_g, 1) + " g"),
+        ]),
+        footer: [
+          el("button", { class: "btn btn-ghost", onclick: () => m.close() }, "Cancelar"),
+          el("button", { class: "btn btn-primary", onclick: ok }, "💾 Guardar receta"),
+        ],
+      });
+      setTimeout(() => { fNom.focus(); fNom.select(); }, 60);
     }
 
     /** Pone una receta en una opción que ya existe */
